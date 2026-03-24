@@ -1,21 +1,73 @@
 {
-  "name": "MaMairie - Plateforme GovTech",
+  "name": "MaMairie",
   "short_name": "MaMairie",
   "description": "Plateforme de digitalisation des actes d'état civil pour les mairies africaines",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#ffffff",
   "theme_color": "#f97316",
+  "categories": ["government", "productivity", "utilities"],
+  "lang": "fr-FR",
+  "dir": "ltr",
   "icons": [
     {
-      "src": "/logo-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "src": "/Logo 2.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/logo-512.png",
+      "src": "/Logo 2.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/Logo 2.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
-  ]
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/screenshot-desktop.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nouvelle Demande",
+      "short_name": "Demande",
+      "description": "Créer une nouvelle demande d'acte",
+      "url": "/demande-extrait",
+      "icons": [{ "src": "/Logo 2.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mes Demandes",
+      "short_name": "Demandes",
+      "description": "Voir mes demandes",
+      "url": "/mes-demandes",
+      "icons": [{ "src": "/Logo 2.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Notifications",
+      "short_name": "Notifs",
+      "description": "Voir les notifications",
+      "url": "/dashboard-citoyen",
+      "icons": [{ "src": "/Logo 2.png", "sizes": "192x192" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
 }
