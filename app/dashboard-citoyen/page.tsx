@@ -85,7 +85,7 @@ export default function DashboardCitoyenPage() {
       <Sidebar role="citoyen" />
       
       {/* Main Content */}
-      <div className="flex-1">
+      <div className="flex-1 w-full lg:w-auto">
         {/* Header */}
         <Header 
           userName={userData ? `${userData.prenom} ${userData.nom}` : 'Chargement...'}
@@ -94,17 +94,17 @@ export default function DashboardCitoyenPage() {
         />
         
         {/* Page Content */}
-        <main className="p-8">
+        <main className="p-4 md:p-6 lg:p-8">
           {/* Welcome Message */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+          <div className="mb-6 md:mb-8">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
               Bienvenue, {userData ? `${userData.prenom} ${userData.nom}` : 'Chargement...'}
             </h1>
-            <p className="text-gray-600">Voici un aperçu de vos demandes et documents</p>
+            <p className="text-sm md:text-base text-gray-600">Voici un aperçu de vos demandes et documents</p>
           </div>
 
           {/* Stats Cards */}
-          <div className="grid md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
             {/* Demandes en cours */}
             <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-transform">
               <div className="flex items-center justify-between">
@@ -135,11 +135,11 @@ export default function DashboardCitoyenPage() {
           </div>
 
           {/* Two Column Layout */}
-          <div className="grid lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 lg:gap-8">
             {/* Left Column - Quick Action */}
             <Card className="h-fit">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                <FileText className="text-primary-500" size={28} />
+              <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6 flex items-center gap-2">
+                <FileText className="text-primary-500" size={24} />
                 Demander un Extrait d'Acte
               </h2>
               
