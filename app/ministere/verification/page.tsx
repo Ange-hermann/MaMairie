@@ -450,7 +450,7 @@ export default function VerificationActesPage() {
                   value={searchValue}
                   onChange={(e) => setSearchValue(e.target.value)}
                   placeholder={searchType === 'numero' ? 'Ex: N-2024-001234' : 'Ex: naissance-N2024001234-abc123'}
-                  icon={searchType === 'numero' ? Hash : QrCode}
+                  icon={searchType === 'numero' ? <Hash size={20} /> : <QrCode size={20} />}
                 />
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
