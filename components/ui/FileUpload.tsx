@@ -75,13 +75,15 @@ export const FileUpload: React.FC<FileUploadProps> = ({
       }
 
       // Obtenir l'URL publique (signée pour 1 an)
-      const { data: { signedUrl }, error: urlError } = await supabase.storage
+      const { data: urlData, error: urlError } = await supabase.storage
         .from('demandes-documents')
         .createSignedUrl(fileName, 31536000) // 1 an en secondes
 
-      if (urlError) {
-        throw urlError
+      if (urlError || !urlData?.signedUrl) {
+        throw urlError || new Error('Impossible de créer l\'URL signée')
       }
+      
+      const signedUrl = urlData.signedUrl
 
       setUploadedFile({ name: file.name, url: signedUrl })
       onFileUploaded(signedUrl, file.name)
