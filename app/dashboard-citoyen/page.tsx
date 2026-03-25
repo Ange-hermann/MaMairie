@@ -148,13 +148,13 @@ export default function DashboardCitoyenPage() {
                   </select>
                 </div>
                 
-                <div>
+                <div className="w-full">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Date de Naissance <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
-                    className="w-full max-w-full px-3 md:px-4 py-2 md:py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-sm md:text-base"
+                    className="w-full min-w-0 px-2 md:px-4 py-2 md:py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-xs md:text-base box-border"
                     defaultValue="2024-12-15"
                   />
                 </div>
@@ -254,17 +254,6 @@ export default function DashboardCitoyenPage() {
                 )}
               </div>
             </Card>
-          </div>
-
-          {/* Success Message */}
-          <div className="mt-8 bg-green-50 border-l-4 border-green-500 rounded-lg p-5 flex items-center gap-4 shadow-sm">
-            <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <CheckCircle className="text-white" size={24} />
-            </div>
-            <div>
-              <p className="text-green-900 font-bold text-base">Demande validée avec succès!</p>
-              <p className="text-green-700 text-sm">Votre document est prêt à être téléchargé.</p>
-            </div>
           </div>
         </main>
       </div>

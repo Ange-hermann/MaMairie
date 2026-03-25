@@ -26,9 +26,10 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             className={cn(
-              'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all',
+              'w-full min-w-0 px-3 md:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-sm md:text-base box-border',
               icon && 'pl-10',
               error && 'border-red-500',
+              props.type === 'date' && 'text-xs md:text-base',
               className
             )}
             {...props}

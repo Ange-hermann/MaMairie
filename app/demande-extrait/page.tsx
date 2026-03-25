@@ -164,7 +164,7 @@ export default function DemandeExtraitPage() {
                   />
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   <Input
                     label="Date de Naissance"
                     type="date"
