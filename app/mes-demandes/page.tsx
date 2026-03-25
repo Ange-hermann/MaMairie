@@ -211,26 +211,26 @@ export default function MesDemandesPage() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar role="citoyen" />
       
-      <div className="flex-1">
+      <div className="flex-1 w-full lg:w-auto">
         <Header 
           userName={userData ? `${userData.prenom} ${userData.nom}` : 'Chargement...'}
           userRole="citoyen"
           avatarUrl={userData?.avatar_url}
         />
         
-        <main className="p-6">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+        <main className="p-4 md:p-6">
+          <div className="mb-4 md:mb-6">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
               Mes Demandes
             </h1>
-            <p className="text-gray-600">
+            <p className="text-sm md:text-base text-gray-600">
               Suivez l'état de vos demandes d'actes
             </p>
           </div>
 
-          <Card className="mb-6">
+          <Card className="mb-4 md:mb-6">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
               <Input
                 type="text"
                 placeholder="Rechercher par nom ou type d'acte..."
@@ -242,14 +242,14 @@ export default function MesDemandesPage() {
           </Card>
 
           <Card>
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto -mx-4 md:mx-0">
+              <table className="w-full min-w-[800px]">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Type d'Acte
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Nom
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">

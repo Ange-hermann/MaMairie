@@ -124,27 +124,27 @@ export default function DemandeExtraitPage() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar role="citoyen" />
       
-      <div className="flex-1">
+      <div className="flex-1 w-full lg:w-auto">
         <Header 
           userName={userData ? `${userData.prenom} ${userData.nom}` : 'Chargement...'}
           userRole="citoyen"
           avatarUrl={userData?.avatar_url}
         />
         
-        <main className="p-6">
+        <main className="p-4 md:p-6">
           <div className="max-w-4xl mx-auto">
-            <div className="mb-6">
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            <div className="mb-4 md:mb-6">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
                 Demander un Extrait d'Acte de Naissance
               </h1>
-              <p className="text-gray-600">
+              <p className="text-sm md:text-base text-gray-600">
                 Remplissez le formulaire ci-dessous pour faire votre demande
               </p>
             </div>
 
             <Card>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
+              <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   <Input
                     label="Nom"
                     type="text"

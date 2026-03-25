@@ -135,7 +135,7 @@ export default function DashboardCitoyenPage() {
           </div>
 
           {/* Two Column Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 lg:gap-8">
+          <div className="grid grid-cols-2 gap-3 md:gap-6 lg:gap-8">
             {/* Left Column - Quick Action */}
             <Card className="h-fit">
               <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6 flex items-center gap-2">
