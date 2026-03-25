@@ -140,58 +140,58 @@ export default function DashboardAgentPage() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar role="agent" />
       
-      <div className="flex-1">
+      <div className="flex-1 w-full lg:w-auto">
         <Header 
           userName={userData ? `${userData.prenom} ${userData.nom}` : 'Chargement...'}
           userRole="agent"
           avatarUrl={userData?.avatar_url}
         />
         
-        <main className="p-8">
+        <main className="p-4 md:p-6 lg:p-8">
           {/* Welcome Message */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center gap-3">
-              <LayoutDashboard className="text-primary-500" size={36} />
+          <div className="mb-4 md:mb-6 lg:mb-8">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2 flex items-center gap-2 md:gap-3">
+              <LayoutDashboard className="text-primary-500" size={28} />
               Tableau de Bord Agent
             </h1>
-            <p className="text-gray-600">
+            <p className="text-sm md:text-base text-gray-600">
               Vue d'ensemble de votre mairie et des demandes en cours
             </p>
           </div>
 
           {/* Stats Cards - Demandes */}
-          <div className="grid md:grid-cols-2 gap-6 mb-8">
-            <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm opacity-90 mb-1">Demandes en Attente</p>
-                  <p className="text-5xl font-bold mb-2">{stats.demandesEnAttente}</p>
-                  <p className="text-sm opacity-80">À traiter</p>
+          <div className="grid grid-cols-2 gap-3 md:gap-6 mb-4 md:mb-6 lg:mb-8">
+            <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-4 md:p-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center md:justify-between gap-2 md:gap-0">
+                <div className="flex-1">
+                  <p className="text-xs md:text-sm opacity-90 mb-1">Demandes en Attente</p>
+                  <p className="text-3xl md:text-5xl font-bold mb-1 md:mb-2">{stats.demandesEnAttente}</p>
+                  <p className="text-xs md:text-sm opacity-80 hidden md:block">À traiter</p>
                 </div>
-                <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                  <Clock size={40} strokeWidth={2} />
+                <div className="w-12 h-12 md:w-20 md:h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                  <Clock className="w-6 h-6 md:w-10 md:h-10" strokeWidth={2} />
                 </div>
               </div>
             </Card>
 
-            <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm opacity-90 mb-1">Demandes Traitées</p>
-                  <p className="text-5xl font-bold mb-2">{stats.demandesTraitees}</p>
-                  <p className="text-sm opacity-80">Ce mois-ci</p>
+            <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white p-4 md:p-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center md:justify-between gap-2 md:gap-0">
+                <div className="flex-1">
+                  <p className="text-xs md:text-sm opacity-90 mb-1">Demandes Traitées</p>
+                  <p className="text-3xl md:text-5xl font-bold mb-1 md:mb-2">{stats.demandesTraitees}</p>
+                  <p className="text-xs md:text-sm opacity-80 hidden md:block">Ce mois-ci</p>
                 </div>
-                <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                  <CheckCircle size={40} strokeWidth={2} />
+                <div className="w-12 h-12 md:w-20 md:h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6 md:w-10 md:h-10" strokeWidth={2} />
                 </div>
               </div>
             </Card>
           </div>
 
           {/* Stats Cards - État Civil */}
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">État Civil</h2>
-            <div className="grid md:grid-cols-3 gap-6">
+          <div className="mb-4 md:mb-6 lg:mb-8">
+            <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">État Civil</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
               <Link href="/agent/etat-civil/naissances">
                 <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white hover:scale-105 transition-transform cursor-pointer">
                   <div className="flex items-center justify-between">
