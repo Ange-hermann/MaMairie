@@ -59,7 +59,7 @@ export default function LoginPage() {
       if (userData.role === 'citoyen') {
         router.push('/dashboard-citoyen')
       } else if (userData.role === 'agent') {
-        router.push('/dashboard-mairie')
+        router.push('/dashboard-agent')
       } else if (userData.role === 'admin') {
         router.push('/dashboard-admin')
       } else if (userData.role === 'ministere') {
