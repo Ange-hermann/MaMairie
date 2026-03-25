@@ -234,26 +234,26 @@ export default function DashboardMinisterePage() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar role="ministere" />
       
-      <div className="flex-1">
+      <div className="flex-1 w-full lg:w-auto">
         <Header 
           userName={userData ? `${userData.prenom} ${userData.nom}` : 'Ministère'}
           userRole="ministere"
           avatarUrl={userData?.avatar_url}
         />
         
-        <main className="p-6">
+        <main className="p-4 md:p-6">
           {/* En-tête */}
-          <div className="mb-6 animate-fadeIn">
-            <h1 className="text-4xl font-bold text-gradient mb-2">
+          <div className="mb-4 md:mb-6 animate-fadeIn">
+            <h1 className="text-2xl md:text-4xl font-bold text-gradient mb-2">
               🏛️ Tableau de Bord National
             </h1>
-            <p className="text-gray-600 text-lg">
+            <p className="text-sm md:text-base text-gray-600 md:text-lg">
               Supervision de l'état civil - République de Côte d'Ivoire
             </p>
           </div>
 
           {/* Statistiques Principales */}
-          <div className="grid md:grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-4 md:mb-6">
             <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white hover-lift animate-fadeIn">
               <div className="flex items-center justify-between">
                 <div>
