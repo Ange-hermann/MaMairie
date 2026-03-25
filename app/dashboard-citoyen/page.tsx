@@ -95,14 +95,6 @@ export default function DashboardCitoyenPage() {
         
         {/* Page Content */}
         <main className="p-4 md:p-6 lg:p-8">
-          {/* Welcome Message */}
-          <div className="mb-6 md:mb-8">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
-              Bienvenue, {userData ? `${userData.prenom} ${userData.nom}` : 'Chargement...'}
-            </h1>
-            <p className="text-sm md:text-base text-gray-600">Voici un aperçu de vos demandes et documents</p>
-          </div>
-
           {/* Stats Cards */}
           <div className="grid grid-cols-2 gap-3 md:gap-6 mb-6 md:mb-8">
             {/* Demandes en cours */}
@@ -135,7 +127,7 @@ export default function DashboardCitoyenPage() {
           </div>
 
           {/* Two Column Layout */}
-          <div className="grid grid-cols-2 gap-3 md:gap-6 lg:gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 lg:gap-8">
             {/* Left Column - Quick Action */}
             <Card className="h-fit">
               <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6 flex items-center gap-2">

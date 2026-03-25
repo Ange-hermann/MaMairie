@@ -28,43 +28,43 @@ export const Header: React.FC<HeaderProps> = ({ userName, userRole, avatarUrl })
   }
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+    <header className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-3 md:py-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-lg md:text-2xl font-bold text-gray-800 truncate">
             Bienvenue, {userName}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-xs md:text-sm text-gray-500 mt-1">
             {userRole === 'citoyen' && 'Espace Citoyen'}
             {userRole === 'agent' && 'Espace Agent Municipal'}
             {userRole === 'admin' && 'Espace Administrateur'}
           </p>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
           <NotificationBell />
           
           <div className="relative">
             <div 
               onClick={() => setShowMenu(!showMenu)}
-              className="flex items-center gap-3 px-4 py-2 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-all"
+              className="flex items-center gap-2 md:gap-3 px-2 md:px-4 py-2 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-all"
             >
               {avatarUrl ? (
                 <img 
                   src={avatarUrl} 
                   alt={userName} 
-                  className="w-10 h-10 rounded-full object-cover border-2 border-primary-500"
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border-2 border-primary-500"
                 />
               ) : (
-                <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold">
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold text-sm md:text-base">
                   {userName.charAt(0).toUpperCase()}
                 </div>
               )}
-              <div className="text-sm">
+              <div className="text-xs md:text-sm hidden sm:block">
                 <p className="font-medium text-gray-800">{userName}</p>
                 <p className="text-gray-500 capitalize">{userRole}</p>
               </div>
-              <ChevronDown size={20} className="text-gray-600" />
+              <ChevronDown size={16} className="text-gray-600 md:w-5 md:h-5" />
             </div>
 
             {/* Menu Déroulant */}
