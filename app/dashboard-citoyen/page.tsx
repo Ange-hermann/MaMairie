@@ -154,7 +154,7 @@ export default function DashboardCitoyenPage() {
                   </label>
                   <input
                     type="date"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                    className="w-full max-w-full px-3 md:px-4 py-2 md:py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-sm md:text-base"
                     defaultValue="2024-12-15"
                   />
                 </div>

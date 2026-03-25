@@ -190,22 +190,33 @@ export const NotificationBell: React.FC = () => {
           <div className="fixed md:absolute inset-0 md:inset-auto md:right-0 md:mt-2 md:w-96 bg-white md:rounded-lg shadow-xl border-0 md:border md:border-gray-200 z-50 max-h-screen md:max-h-[600px] flex flex-col">
             {/* Header */}
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                <Bell size={20} className="text-primary-500" />
-                Notifications
-                {unreadCount > 0 && (
-                  <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                    {unreadCount}
-                  </span>
-                )}
-              </h3>
+              <div className="flex items-center gap-2">
+                {/* Bouton retour sur mobile */}
+                <button
+                  onClick={() => setShowNotifications(false)}
+                  className="md:hidden text-gray-600 hover:text-gray-800"
+                  aria-label="Fermer"
+                >
+                  <X size={20} />
+                </button>
+                <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                  <Bell size={20} className="text-primary-500" />
+                  <span className="hidden sm:inline">Notifications</span>
+                  {unreadCount > 0 && (
+                    <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                      {unreadCount}
+                    </span>
+                  )}
+                </h3>
+              </div>
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+                  className="text-xs md:text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
                 >
-                  <CheckCheck size={16} />
-                  Tout marquer comme lu
+                  <CheckCheck size={14} className="md:w-4 md:h-4" />
+                  <span className="hidden sm:inline">Tout marquer comme lu</span>
+                  <span className="sm:hidden">Tout lire</span>
                 </button>
               )}
             </div>

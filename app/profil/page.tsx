@@ -220,19 +220,20 @@ export default function ProfilPage() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar role={userData?.role || 'citoyen'} />
       
-      <div className="flex-1">
+      <div className="flex-1 w-full lg:w-auto">
         <Header 
           userName={userData ? `${userData.prenom} ${userData.nom}` : 'Chargement...'}
           userRole={userData?.role || 'citoyen'} 
+          avatarUrl={avatarUrl}
         />
         
-        <main className="p-6">
+        <main className="p-4 md:p-6">
           <div className="max-w-4xl mx-auto">
-            <div className="mb-6">
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            <div className="mb-4 md:mb-6">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
                 Mon Profil
               </h1>
-              <p className="text-gray-600">
+              <p className="text-sm md:text-base text-gray-600">
                 Gérez vos informations personnelles
               </p>
             </div>
@@ -287,7 +288,7 @@ export default function ProfilPage() {
               </h2>
               
               <form onSubmit={handleSaveProfile}>
-                <div className="grid md:grid-cols-2 gap-6 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
                   <Input
                     label="Prénom"
                     type="text"
@@ -305,7 +306,7 @@ export default function ProfilPage() {
                   />
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
                   <Input
                     label="Email"
                     type="email"
