@@ -128,33 +128,33 @@ export default function DemandesAgentPage() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar role="agent" />
       
-      <div className="flex-1">
+      <div className="flex-1 w-full lg:w-auto">
         <Header 
           userName={userData ? `${userData.prenom} ${userData.nom}` : 'Agent'}
           userRole="agent"
           avatarUrl={userData?.avatar_url}
         />
         
-        <main className="p-6">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center gap-3">
-              <FileText className="text-primary-500" size={36} />
+        <main className="p-4 md:p-6">
+          <div className="mb-4 md:mb-6">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2 flex items-center gap-2 md:gap-3">
+              <FileText className="text-primary-500" size={28} />
               Gestion des Demandes
             </h1>
-            <p className="text-gray-600">
+            <p className="text-sm md:text-base text-gray-600">
               Traiter et valider les demandes d'extraits d'actes
             </p>
           </div>
 
           {/* Statistiques */}
-          <div className="grid md:grid-cols-4 gap-6 mb-6">
-            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm opacity-90">Total Demandes</p>
-                  <p className="text-4xl font-bold mt-2">{stats.total}</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-4 md:mb-6">
+            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-4 md:p-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center md:justify-between gap-2">
+                <div className="flex-1">
+                  <p className="text-xs md:text-sm opacity-90">Total Demandes</p>
+                  <p className="text-2xl md:text-4xl font-bold mt-1 md:mt-2">{stats.total}</p>
                 </div>
-                <FileText size={48} className="opacity-20" />
+                <FileText className="w-8 h-8 md:w-12 md:h-12 opacity-20" />
               </div>
             </Card>
 
@@ -190,8 +190,8 @@ export default function DemandesAgentPage() {
           </div>
 
           {/* Filtres */}
-          <Card className="mb-6">
-            <div className="grid md:grid-cols-2 gap-4">
+          <Card className="mb-4 md:mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                 <Input
