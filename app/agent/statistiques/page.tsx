@@ -215,21 +215,21 @@ export default function StatistiquesPage() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar role="agent" />
       
-      <div className="flex-1">
+      <div className="flex-1 w-full lg:w-auto">
         <Header 
           userName={userData ? `${userData.prenom} ${userData.nom}` : 'Chargement...'}
           userRole="agent" 
         />
         
-        <main className="p-6">
+        <main className="p-4 md:p-6">
           {/* En-tête */}
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-4 md:mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center gap-3">
-                <BarChart3 className="text-primary-500" size={36} />
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2 flex items-center gap-2 md:gap-3">
+                <BarChart3 className="text-primary-500" size={28} />
                 Statistiques
               </h1>
-              <p className="text-gray-600">
+              <p className="text-sm md:text-base text-gray-600">
                 Analyse et suivi des activités de la mairie
               </p>
             </div>
@@ -258,7 +258,7 @@ export default function StatistiquesPage() {
           </div>
 
           {/* Cartes Statistiques Principales */}
-          <div className="grid md:grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-4 md:mb-6">
             <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
               <div className="flex items-center justify-between">
                 <div>
@@ -389,7 +389,7 @@ export default function StatistiquesPage() {
           </Card>
 
           {/* Détails des Demandes */}
-          <div className="grid md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
             <Card className="border-l-4 border-orange-500">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-gray-700">En Attente</h3>
