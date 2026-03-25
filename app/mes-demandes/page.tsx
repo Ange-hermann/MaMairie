@@ -243,7 +243,7 @@ export default function MesDemandesPage() {
 
           <Card>
             <div className="overflow-x-auto -mx-4 md:mx-0">
-              <table className="w-full min-w-[800px]">
+              <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
