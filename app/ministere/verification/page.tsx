@@ -369,14 +369,14 @@ export default function VerificationActesPage() {
           </div>
 
           {/* Statistiques */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
-            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white hover-lift animate-fadeIn">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm opacity-90">Total Vérifications</p>
-                  <p className="text-4xl font-bold mt-2">{stats.total_verifications}</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-4 md:mb-6">
+            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white hover-lift animate-fadeIn p-4 md:p-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center md:justify-between">
+                <div className="flex-1">
+                  <p className="text-xs md:text-sm opacity-90">Total Vérifications</p>
+                  <p className="text-2xl md:text-4xl font-bold mt-1 md:mt-2">{stats.total_verifications}</p>
                 </div>
-                <Search size={48} className="opacity-20" />
+                <Search className="w-8 h-8 md:w-12 md:h-12 opacity-20 hidden md:block" />
               </div>
             </Card>
 
@@ -411,7 +411,7 @@ export default function VerificationActesPage() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {/* Formulaire de Vérification */}
             <Card className="animate-scaleIn">
               <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">

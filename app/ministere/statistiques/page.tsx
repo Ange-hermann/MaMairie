@@ -407,18 +407,19 @@ export default function StatistiquesNationalesPage() {
           </div>
 
           {/* Statistiques Principales */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
-            <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white hover-lift animate-fadeIn">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="text-sm opacity-90">Naissances</p>
-                  <p className="text-4xl font-bold mt-2">{stats.naissances.total.toLocaleString()}</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-4 md:mb-6">
+            <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white hover-lift animate-fadeIn p-4 md:p-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center md:justify-between mb-2 md:mb-3">
+                <div className="flex-1">
+                  <p className="text-xs md:text-sm opacity-90">Naissances</p>
+                  <p className="text-2xl md:text-4xl font-bold mt-1 md:mt-2">{stats.naissances.total.toLocaleString()}</p>
                 </div>
-                <Baby size={48} className="opacity-20" />
+                <Baby className="w-8 h-8 md:w-12 md:h-12 opacity-20 hidden md:block" />
               </div>
-              <div className="flex items-center gap-2 text-sm">
-                <TrendingUp size={16} />
-                <span>{stats.naissances.moisActuel} ce mois</span>
+              <div className="flex items-center gap-2 text-xs md:text-sm">
+                <TrendingUp className="w-4 h-4" />
+                <span className="hidden md:inline">{stats.naissances.moisActuel} ce mois</span>
+                <span className="md:hidden">{stats.naissances.moisActuel}</span>
               </div>
             </Card>
 

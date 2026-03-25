@@ -303,22 +303,22 @@ export default function AgentsMinisterePage() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar role="ministere" />
       
-      <div className="flex-1">
+      <div className="flex-1 w-full lg:w-auto">
         <Header 
           userName={userData ? `${userData.prenom} ${userData.nom}` : 'Ministère'}
           userRole="ministere"
           avatarUrl={userData?.avatar_url}
         />
         
-        <main className="p-6">
+        <main className="p-4 md:p-6">
           {/* En-tête */}
-          <div className="mb-6 flex items-center justify-between animate-fadeIn">
+          <div className="mb-4 md:mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 animate-fadeIn">
             <div>
-              <h1 className="text-3xl font-bold text-gradient mb-2 flex items-center gap-3">
-                <Users className="text-primary-500" size={36} />
+              <h1 className="text-2xl md:text-3xl font-bold text-gradient mb-2 flex items-center gap-2 md:gap-3">
+                <Users className="text-primary-500" size={28} />
                 Agents Municipaux
               </h1>
-              <p className="text-gray-600">
+              <p className="text-sm md:text-base text-gray-600">
                 Gestion de tous les agents des mairies de Côte d'Ivoire
               </p>
             </div>
@@ -333,7 +333,7 @@ export default function AgentsMinisterePage() {
           </div>
 
           {/* Statistiques */}
-          <div className="grid md:grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-4 md:mb-6">
             <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white hover-lift animate-fadeIn">
               <div className="flex items-center justify-between">
                 <div>
