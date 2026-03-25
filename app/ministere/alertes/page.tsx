@@ -294,22 +294,22 @@ export default function AlertesMinisterePage() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar role="ministere" />
       
-      <div className="flex-1">
+      <div className="flex-1 w-full lg:w-auto">
         <Header 
           userName={userData ? `${userData.prenom} ${userData.nom}` : 'Ministère'}
           userRole="ministere"
           avatarUrl={userData?.avatar_url}
         />
         
-        <main className="p-6">
+        <main className="p-4 md:p-6">
           {/* En-tête */}
-          <div className="mb-6 flex items-center justify-between animate-fadeIn">
+          <div className="mb-4 md:mb-6 flex items-center justify-between animate-fadeIn">
             <div>
-              <h1 className="text-3xl font-bold text-gradient mb-2 flex items-center gap-3">
+              <h1 className="text-2xl md:text-3xl font-bold text-gradient mb-2 flex items-center gap-3">
                 <AlertTriangle className="text-primary-500" size={36} />
                 Alertes & Anomalies
               </h1>
-              <p className="text-gray-600">
+              <p className="text-sm md:text-base text-gray-600">
                 Détection et gestion des anomalies au niveau national
               </p>
             </div>
@@ -324,7 +324,7 @@ export default function AlertesMinisterePage() {
           </div>
 
           {/* Statistiques */}
-          <div className="grid md:grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
             <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white hover-lift animate-fadeIn">
               <div className="flex items-center justify-between">
                 <div>
@@ -368,7 +368,7 @@ export default function AlertesMinisterePage() {
 
           {/* Filtres */}
           <Card className="mb-6 animate-scaleIn">
-            <div className="grid md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                 <Input
@@ -525,7 +525,7 @@ export default function AlertesMinisterePage() {
                   </div>
 
                   {/* Détails */}
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <p className="text-sm text-gray-600 mb-1">Type</p>
                       <p className="font-semibold capitalize">{selectedAlerte.type}</p>

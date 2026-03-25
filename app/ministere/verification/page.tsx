@@ -349,17 +349,17 @@ export default function VerificationActesPage() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar role="ministere" />
       
-      <div className="flex-1">
+      <div className="flex-1 w-full lg:w-auto">
         <Header 
           userName={userData ? `${userData.prenom} ${userData.nom}` : 'Ministère'}
           userRole="ministere"
           avatarUrl={userData?.avatar_url}
         />
         
-        <main className="p-6">
+        <main className="p-4 md:p-6">
           {/* En-tête */}
-          <div className="mb-6 animate-fadeIn">
-            <h1 className="text-3xl font-bold text-gradient mb-2 flex items-center gap-3">
+          <div className="mb-4 md:mb-6 animate-fadeIn">
+            <h1 className="text-2xl md:text-3xl font-bold text-gradient mb-2 flex items-center gap-3">
               <Shield className="text-primary-500" size={36} />
               Vérification d'Actes
             </h1>
@@ -369,7 +369,7 @@ export default function VerificationActesPage() {
           </div>
 
           {/* Statistiques */}
-          <div className="grid md:grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
             <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white hover-lift animate-fadeIn">
               <div className="flex items-center justify-between">
                 <div>
@@ -411,7 +411,7 @@ export default function VerificationActesPage() {
             </Card>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-2 gap-6">
             {/* Formulaire de Vérification */}
             <Card className="animate-scaleIn">
               <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">

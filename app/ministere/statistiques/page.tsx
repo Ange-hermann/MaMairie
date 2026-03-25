@@ -366,22 +366,22 @@ export default function StatistiquesNationalesPage() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar role="ministere" />
       
-      <div className="flex-1">
+      <div className="flex-1 w-full lg:w-auto">
         <Header 
           userName={userData ? `${userData.prenom} ${userData.nom}` : 'Ministère'}
           userRole="ministere"
           avatarUrl={userData?.avatar_url}
         />
         
-        <main className="p-6">
+        <main className="p-4 md:p-6">
           {/* En-tête */}
-          <div className="mb-6 flex items-center justify-between animate-fadeIn">
+          <div className="mb-4 md:mb-6 flex items-center justify-between animate-fadeIn">
             <div>
-              <h1 className="text-3xl font-bold text-gradient mb-2 flex items-center gap-3">
+              <h1 className="text-2xl md:text-3xl font-bold text-gradient mb-2 flex items-center gap-3">
                 <BarChart3 className="text-primary-500" size={36} />
                 Statistiques Nationales
               </h1>
-              <p className="text-gray-600">
+              <p className="text-sm md:text-base text-gray-600">
                 Vue d'ensemble de l'état civil en Côte d'Ivoire
               </p>
             </div>
@@ -407,7 +407,7 @@ export default function StatistiquesNationalesPage() {
           </div>
 
           {/* Statistiques Principales */}
-          <div className="grid md:grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
             <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white hover-lift animate-fadeIn">
               <div className="flex items-center justify-between mb-3">
                 <div>
@@ -466,7 +466,7 @@ export default function StatistiquesNationalesPage() {
           </div>
 
           {/* Statistiques Secondaires */}
-          <div className="grid md:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-2 gap-6 mb-6">
             <Card className="border-l-4 border-orange-500 hover-lift animate-slideInLeft">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-gray-700">Mairies</h3>
@@ -491,7 +491,7 @@ export default function StatistiquesNationalesPage() {
           </div>
 
           {/* Graphiques */}
-          <div className="grid md:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-2 gap-6 mb-6">
             {/* Évolution sur 12 mois */}
             <Card className="animate-scaleIn">
               <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
