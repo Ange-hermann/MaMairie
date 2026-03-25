@@ -1,15 +1,14 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
-import { LucideIcon } from 'lucide-react'
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string
   error?: string
-  icon?: LucideIcon
+  icon?: React.ReactNode
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, icon: Icon, className, ...props }, ref) => {
+  ({ label, error, icon, className, ...props }, ref) => {
     return (
       <div className="w-full">
         {label && (
@@ -19,16 +18,16 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           </label>
         )}
         <div className="relative">
-          {Icon && (
+          {icon && (
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-              <Icon size={20} />
+              {icon}
             </div>
           )}
           <input
             ref={ref}
             className={cn(
               'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all',
-              Icon && 'pl-10',
+              icon && 'pl-10',
               error && 'border-red-500',
               className
             )}
