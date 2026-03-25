@@ -20,8 +20,8 @@ export const metadata: Metadata = {
     telephone: false,
   },
   icons: {
-    icon: '/Logo 2.png',
-    apple: '/Logo 2.png',
+    icon: '/logo-mamairie.png',
+    apple: '/logo-mamairie.png',
   },
 }
 
@@ -46,7 +46,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="MaMairie" />
-        <link rel="apple-touch-icon" href="/Logo 2.png" />
+        <link rel="apple-touch-icon" href="/logo-mamairie.png" />
       </head>
       <body className={inter.className}>
         <RegisterServiceWorker />

@@ -13,19 +13,19 @@
   "dir": "ltr",
   "icons": [
     {
-      "src": "/Logo 2.png",
+      "src": "/logo-mamairie.png",
       "sizes": "any",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/Logo 2.png",
+      "src": "/logo-mamairie.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/Logo 2.png",
+      "src": "/logo-mamairie.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -51,21 +51,21 @@
       "short_name": "Demande",
       "description": "Créer une nouvelle demande d'acte",
       "url": "/demande-extrait",
-      "icons": [{ "src": "/Logo 2.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/logo-mamairie.png", "sizes": "192x192" }]
     },
     {
       "name": "Mes Demandes",
       "short_name": "Demandes",
       "description": "Voir mes demandes",
       "url": "/mes-demandes",
-      "icons": [{ "src": "/Logo 2.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/logo-mamairie.png", "sizes": "192x192" }]
     },
     {
       "name": "Notifications",
       "short_name": "Notifs",
       "description": "Voir les notifications",
       "url": "/dashboard-citoyen",
-      "icons": [{ "src": "/Logo 2.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/logo-mamairie.png", "sizes": "192x192" }]
     }
   ],
   "related_applications": [],

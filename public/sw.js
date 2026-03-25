@@ -7,7 +7,7 @@ const urlsToCache = [
   '/dashboard-citoyen',
   '/demande-extrait',
   '/mes-demandes',
-  '/Logo 2.png',
+  '/logo-mamairie.png',
   '/manifest.json'
 ]
 
@@ -93,8 +93,8 @@ self.addEventListener('push', (event) => {
   
   const options = {
     body: event.data ? event.data.text() : 'Nouvelle notification',
-    icon: '/Logo 2.png',
-    badge: '/Logo 2.png',
+    icon: '/logo-mamairie.png',
+    badge: '/logo-mamairie.png',
     vibrate: [200, 100, 200],
     tag: 'mamairie-notification',
     requireInteraction: false
