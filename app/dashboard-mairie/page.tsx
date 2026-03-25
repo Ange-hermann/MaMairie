@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
 import { StatCard, Card } from '@/components/ui/Card'
@@ -8,8 +8,54 @@ import { Button } from '@/components/ui/Button'
 import { FileText, Users, CheckCircle, Download, Eye } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { useRouter } from 'next/navigation'
 
 export default function DashboardMairiePage() {
+  const router = useRouter()
+  const supabase = createClientComponentClient()
+  const [userData, setUserData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        // Forcer le rafraîchissement de la session
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (!session) {
+          router.push('/login')
+          return
+        }
+
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (!user) {
+          router.push('/login')
+          return
+        }
+
+        const { data: profile, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+
+        if (error) {
+          console.error('Erreur profil:', error)
+        } else {
+          setUserData(profile)
+        }
+      } catch (error) {
+        console.error('Erreur:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUserData()
+  }, [router, supabase])
+
   const [stats] = useState({
     aTraiter: 8,
     validees: 120,
@@ -50,7 +96,11 @@ export default function DashboardMairiePage() {
       <Sidebar role="agent" />
       
       <div className="flex-1">
-        <Header userName="Comptant" userRole="agent" />
+        <Header 
+          userName={userData ? `${userData.prenom} ${userData.nom}` : 'Chargement...'}
+          userRole={userData?.role || 'agent'}
+          avatarUrl={userData?.avatar_url}
+        />
         
         <main className="p-6">
           {/* Stats Cards */}
