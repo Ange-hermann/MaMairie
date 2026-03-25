@@ -16,7 +16,7 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md', variant = 'light' }) =>
   return (
     <div className="flex items-center">
       <Image
-        src="/logo-mamairie.png"
+        src="/logo-mamairie.png?v=3"
         alt="MaMairie Logo"
         width={dimensions[size].width}
         height={dimensions[size].height}
