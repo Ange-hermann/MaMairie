@@ -104,31 +104,31 @@ export default function DashboardCitoyenPage() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
+          <div className="grid grid-cols-2 gap-3 md:gap-6 mb-6 md:mb-8">
             {/* Demandes en cours */}
-            <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-transform">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm opacity-90 mb-1">Demandes en cours</p>
-                  <p className="text-5xl font-bold mb-2">{stats.enCours}</p>
-                  <p className="text-sm opacity-80">En attente de validation</p>
+            <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl shadow-lg p-4 md:p-6 text-white">
+              <div className="flex flex-col md:flex-row items-start md:items-center md:justify-between gap-3">
+                <div className="flex-1">
+                  <p className="text-xs md:text-sm opacity-90 mb-1">Demandes en cours</p>
+                  <p className="text-3xl md:text-5xl font-bold mb-1 md:mb-2">{stats.enCours}</p>
+                  <p className="text-xs md:text-sm opacity-80 hidden md:block">En attente de validation</p>
                 </div>
-                <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                  <Clock size={40} strokeWidth={2} />
+                <div className="w-12 h-12 md:w-20 md:h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                  <Clock className="w-6 h-6 md:w-10 md:h-10" strokeWidth={2} />
                 </div>
               </div>
             </div>
 
             {/* Documents Reçus */}
-            <div className="bg-gradient-to-br from-secondary-500 to-secondary-600 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-transform">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm opacity-90 mb-1">Documents Reçus</p>
-                  <p className="text-5xl font-bold mb-2">{stats.documentsRecus}</p>
-                  <p className="text-sm opacity-80">Téléchargements disponibles</p>
+            <div className="bg-gradient-to-br from-secondary-500 to-secondary-600 rounded-xl shadow-lg p-4 md:p-6 text-white">
+              <div className="flex flex-col md:flex-row items-start md:items-center md:justify-between gap-3">
+                <div className="flex-1">
+                  <p className="text-xs md:text-sm opacity-90 mb-1">Documents Reçus</p>
+                  <p className="text-3xl md:text-5xl font-bold mb-1 md:mb-2">{stats.documentsRecus}</p>
+                  <p className="text-xs md:text-sm opacity-80 hidden md:block">Prêts à télécharger</p>
                 </div>
-                <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                  <FileCheck size={40} strokeWidth={2} />
+                <div className="w-12 h-12 md:w-20 md:h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6 md:w-10 md:h-10" strokeWidth={2} />
                 </div>
               </div>
             </div>
