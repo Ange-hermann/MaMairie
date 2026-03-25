@@ -1,5 +1,4 @@
 import React from 'react'
-import Image from 'next/image'
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg'
@@ -15,13 +14,12 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md', variant = 'light' }) =>
   
   return (
     <div className="flex items-center">
-      <Image
-        src="/logo-mamairie.png?v=3"
+      <img
+        src="/logo-mamairie.png?v=4"
         alt="MaMairie Logo"
         width={dimensions[size].width}
         height={dimensions[size].height}
         className="object-contain"
-        priority
       />
     </div>
   )
