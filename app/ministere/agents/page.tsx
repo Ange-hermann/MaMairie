@@ -21,7 +21,9 @@ import {
   Mail,
   Phone,
   MapPin,
-  Shield
+  Shield,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
@@ -41,6 +43,13 @@ export default function AgentsMinisterePage() {
   const [selectedAgent, setSelectedAgent] = useState<any>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [togglingStatut, setTogglingStatut] = useState<string | null>(null)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<{agentId: string, currentStatut: string} | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [agentToDelete, setAgentToDelete] = useState<any>(null)
+  const [deleteReason, setDeleteReason] = useState('')
+  const [deleting, setDeleting] = useState(false)
 
   const [formData, setFormData] = useState({
     email: '',
@@ -104,7 +113,7 @@ export default function AgentsMinisterePage() {
 
   const fetchAgents = async () => {
     try {
-      const { data: agentsData } = await supabase
+      const { data: agentsData, error: fetchError } = await supabase
         .from('users')
         .select(`
           *,
@@ -118,32 +127,92 @@ export default function AgentsMinisterePage() {
         .eq('role', 'agent')
         .order('created_at', { ascending: false })
 
+      if (fetchError) {
+        console.error('❌ Erreur lors de la récupération des agents:', fetchError)
+        throw fetchError
+      }
+
+      console.log('📋 Agents récupérés:', agentsData?.length)
+
       if (agentsData) {
         // Enrichir avec statistiques
         const enrichedAgents = await Promise.all(
           agentsData.map(async (agent) => {
-            // Compter les naissances enregistrées
-            const { data: naissances } = await supabase
+            console.log(`📊 Récupération stats pour ${agent.email}...`)
+            
+            // Compter les naissances enregistrées par cet agent
+            const { count: naissancesCount, error: naissancesError } = await supabase
               .from('naissances')
-              .select('id')
-              .eq('created_by', agent.id)
+              .select('*', { count: 'exact', head: true })
+              .or(`created_by.eq.${agent.id},agent_id.eq.${agent.id}`)
 
-            // Compter les demandes traitées
-            const { data: demandes } = await supabase
-              .from('requests')
-              .select('id')
-              .eq('traite_par', agent.id)
+            if (naissancesError) {
+              console.warn('⚠️ Erreur naissances:', naissancesError)
+            }
+
+            // Compter les mariages enregistrés par cet agent
+            const { count: mariagesCount, error: mariagesError } = await supabase
+              .from('mariages')
+              .select('*', { count: 'exact', head: true })
+              .or(`created_by.eq.${agent.id},agent_id.eq.${agent.id}`)
+
+            if (mariagesError) {
+              console.warn('⚠️ Erreur mariages:', mariagesError)
+            }
+
+            // Compter les décès enregistrés par cet agent
+            const { count: decesCount, error: decesError } = await supabase
+              .from('deces')
+              .select('*', { count: 'exact', head: true })
+              .or(`created_by.eq.${agent.id},agent_id.eq.${agent.id}`)
+
+            if (decesError) {
+              console.warn('⚠️ Erreur décès:', decesError)
+            }
+
+            // Compter les demandes de la mairie de l'agent
+            let demandesCount = 0
+            if (agent.mairie_id) {
+              const { count, error: demandesError } = await supabase
+                .from('requests')
+                .select('*', { count: 'exact', head: true })
+                .eq('mairie_id', agent.mairie_id)
+
+              if (demandesError) {
+                console.warn('⚠️ Erreur demandes:', demandesError)
+              } else {
+                demandesCount = count || 0
+                console.log(`Demandes de la mairie ${agent.mairie_id}: ${demandesCount}`)
+              }
+            } else {
+              console.log('Agent sans mairie assignée, pas de demandes')
+            }
+
+            const stats = {
+              naissances_count: naissancesCount || 0,
+              mariages_count: mariagesCount || 0,
+              deces_count: decesCount || 0,
+              demandes_count: demandesCount || 0,
+              total_actes: (naissancesCount || 0) + (mariagesCount || 0) + (decesCount || 0)
+            }
+
+            console.log(`✅ Stats ${agent.email}:`, stats)
 
             return {
               ...agent,
-              naissances_count: naissances?.length || 0,
-              demandes_count: demandes?.length || 0,
-              statut: agent.statut || 'actif',
+              ...stats
             }
           })
         )
 
         setAgents(enrichedAgents)
+
+        // Log des statuts pour debug
+        console.log('📊 Statuts des agents:', enrichedAgents.map(a => ({
+          email: a.email,
+          statut: a.statut,
+          statutType: typeof a.statut
+        })))
 
         // Calculer stats
         const now = new Date()
@@ -156,6 +225,7 @@ export default function AgentsMinisterePage() {
           nouveaux: enrichedAgents.filter(a => new Date(a.created_at) > lastMonth).length,
         }
         setStats(statsData)
+        console.log('📈 Stats calculées:', statsData)
       }
     } catch (error) {
       console.error('Erreur:', error)
@@ -252,25 +322,131 @@ export default function AgentsMinisterePage() {
     }
   }
 
-  const toggleStatut = async (agentId: string, currentStatut: string) => {
-    const newStatut = currentStatut === 'bloque' ? 'actif' : 'bloque'
-    
-    if (!confirm(`Voulez-vous ${newStatut === 'bloque' ? 'bloquer' : 'débloquer'} cet agent ?`)) {
-      return
-    }
+  const toggleStatut = (agentId: string, currentStatut: string) => {
+    console.log('🔄 toggleStatut appelé:', { agentId, currentStatut })
+    setConfirmAction({ agentId, currentStatut })
+    setShowConfirmModal(true)
+  }
 
+  const executeToggleStatut = async () => {
+    if (!confirmAction) return
+    
+    const { agentId, currentStatut } = confirmAction
+    const newStatut = currentStatut === 'bloque' ? 'actif' : 'bloque'
+    console.log('📝 Nouveau statut:', newStatut)
+    
+    setShowConfirmModal(false)
+
+    setTogglingStatut(agentId)
+    console.log('⏳ Début de la mise à jour...')
+    
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('users')
         .update({ statut: newStatut })
         .eq('id', agentId)
+        .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Erreur Supabase:', error)
+        throw error
+      }
       
-      alert(`✅ Agent ${newStatut === 'bloque' ? 'bloqué' : 'débloqué'}`)
-      fetchAgents()
+      console.log('✅ Statut mis à jour avec succès:', data)
+      
+      // Mettre à jour l'agent dans la liste locale immédiatement
+      setAgents(prevAgents => 
+        prevAgents.map(a => 
+          a.id === agentId ? { ...a, statut: newStatut } : a
+        )
+      )
+      
+      // Rafraîchir la liste complète
+      console.log('🔄 Rafraîchissement de la liste...')
+      await fetchAgents()
+      
+      // Message de succès plus visible
+      const successMessage = newStatut === 'bloque'
+        ? '🔒 Agent bloqué avec succès !\n\nIl ne peut plus se connecter.'
+        : '✅ Agent débloqué avec succès !\n\nIl peut maintenant se connecter.'
+      
+      alert(successMessage)
     } catch (error: any) {
-      alert('❌ Erreur : ' + error.message)
+      console.error('❌ Erreur toggleStatut:', error)
+      alert('❌ ERREUR !\n\n' + error.message + '\n\nVérifiez vos permissions.')
+    } finally {
+      setTogglingStatut(null)
+      setConfirmAction(null)
+      console.log('✅ Fin de toggleStatut')
+    }
+  }
+
+  const cancelToggleStatut = () => {
+    console.log('❌ Action annulée par l\'utilisateur')
+    setShowConfirmModal(false)
+    setConfirmAction(null)
+  }
+
+  const openDeleteModal = (agent: any) => {
+    console.log('🗑️ Ouverture modal suppression pour:', agent.email)
+    setAgentToDelete(agent)
+    setDeleteReason('')
+    setShowDeleteModal(true)
+  }
+
+  const cancelDelete = () => {
+    console.log('❌ Suppression annulée')
+    setShowDeleteModal(false)
+    setAgentToDelete(null)
+    setDeleteReason('')
+  }
+
+  const executeDelete = async () => {
+    if (!agentToDelete) return
+
+    console.log('🗑️ Début suppression agent:', agentToDelete.email)
+    console.log('📝 Raison:', deleteReason || 'Aucune raison fournie')
+
+    setDeleting(true)
+    try {
+      // 1. Enregistrer la suppression dans un log (optionnel)
+      if (deleteReason) {
+        await supabase.from('logs_suppressions').insert([{
+          agent_id: agentToDelete.id,
+          agent_email: agentToDelete.email,
+          raison: deleteReason,
+          supprime_par: userData?.id,
+          date_suppression: new Date().toISOString()
+        }])
+      }
+
+      // 2. Supprimer l'agent
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', agentToDelete.id)
+
+      if (error) {
+        console.error('❌ Erreur Supabase:', error)
+        throw error
+      }
+
+      console.log('✅ Agent supprimé avec succès')
+
+      // 3. Rafraîchir la liste
+      await fetchAgents()
+
+      // 4. Fermer le modal
+      setShowDeleteModal(false)
+      setAgentToDelete(null)
+      setDeleteReason('')
+
+      alert('✅ Agent supprimé avec succès !\n\nToutes ses données ont été retirées du système.')
+    } catch (error: any) {
+      console.error('❌ Erreur suppression:', error)
+      alert('❌ ERREUR !\n\n' + error.message + '\n\nImpossible de supprimer cet agent.')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -421,8 +597,18 @@ export default function AgentsMinisterePage() {
                     <th className="text-left p-3 font-semibold text-gray-700">Agent</th>
                     <th className="text-left p-3 font-semibold text-gray-700">Mairie</th>
                     <th className="text-center p-3 font-semibold text-gray-700">Contact</th>
-                    <th className="text-center p-3 font-semibold text-gray-700">Naissances</th>
-                    <th className="text-center p-3 font-semibold text-gray-700">Demandes</th>
+                    <th className="text-center p-3 font-semibold text-gray-700">
+                      <div className="flex flex-col items-center">
+                        <span>Actes</span>
+                        <span className="text-xs font-normal text-gray-500">(N+M+D)</span>
+                      </div>
+                    </th>
+                    <th className="text-center p-3 font-semibold text-gray-700">
+                      <div className="flex flex-col items-center">
+                        <span>Demandes</span>
+                        <span className="text-xs font-normal text-gray-500">Traitées</span>
+                      </div>
+                    </th>
                     <th className="text-center p-3 font-semibold text-gray-700">Inscription</th>
                     <th className="text-center p-3 font-semibold text-gray-700">Statut</th>
                     <th className="text-center p-3 font-semibold text-gray-700">Actions</th>
@@ -472,14 +658,27 @@ export default function AgentsMinisterePage() {
                         </div>
                       </td>
                       <td className="p-3 text-center">
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-600 rounded text-sm font-semibold">
-                          {agent.naissances_count}
-                        </span>
+                        <div className="flex flex-col items-center gap-1">
+                          <span 
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-600 rounded text-sm font-semibold cursor-help"
+                            title={`Naissances: ${agent.naissances_count || 0} | Mariages: ${agent.mariages_count || 0} | Décès: ${agent.deces_count || 0}`}
+                          >
+                            {agent.total_actes || 0}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            actes
+                          </span>
+                        </div>
                       </td>
                       <td className="p-3 text-center">
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-600 rounded text-sm font-semibold">
-                          {agent.demandes_count}
-                        </span>
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-600 rounded text-sm font-semibold">
+                            {agent.demandes_count || 0}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            demandes
+                          </span>
+                        </div>
                       </td>
                       <td className="p-3 text-center text-sm text-gray-600">
                         {new Date(agent.created_at).toLocaleDateString('fr-FR')}
@@ -510,8 +709,22 @@ export default function AgentsMinisterePage() {
                                 : 'text-red-600 hover:bg-red-50'
                             }`}
                             title={agent.statut === 'bloque' ? 'Débloquer' : 'Bloquer'}
+                            disabled={togglingStatut === agent.id}
                           >
-                            {agent.statut === 'bloque' ? <CheckCircle size={18} /> : <Ban size={18} />}
+                            {togglingStatut === agent.id ? (
+                              <div className="spinner" style={{width: 18, height: 18}}></div>
+                            ) : agent.statut === 'bloque' ? (
+                              <CheckCircle size={18} />
+                            ) : (
+                              <Ban size={18} />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => openDeleteModal(agent)}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            title="Supprimer l'agent"
+                          >
+                            <Trash2 size={18} />
                           </button>
                         </div>
                       </td>
@@ -801,6 +1014,134 @@ export default function AgentsMinisterePage() {
                     </Button>
                   </div>
                 </form>
+              </Card>
+            </div>
+          )}
+
+          {/* Modal de Confirmation Blocage/Déblocage */}
+          {showConfirmModal && confirmAction && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fadeIn">
+              <Card className="max-w-md w-full animate-scaleIn">
+                <div className="text-center">
+                  {confirmAction.currentStatut === 'bloque' ? (
+                    <>
+                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <CheckCircle className="text-green-600" size={32} />
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                        Débloquer cet agent ?
+                      </h2>
+                      <p className="text-gray-600 mb-6">
+                        L'agent pourra à nouveau se connecter et effectuer des actions.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Ban className="text-red-600" size={32} />
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                        Bloquer cet agent ?
+                      </h2>
+                      <p className="text-gray-600 mb-6">
+                        L'agent ne pourra plus se connecter ni effectuer d'actions.
+                      </p>
+                    </>
+                  )}
+
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={cancelToggleStatut}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Annuler
+                    </Button>
+                    <Button
+                      onClick={executeToggleStatut}
+                      className={`flex-1 ${
+                        confirmAction.currentStatut === 'bloque'
+                          ? 'bg-green-600 hover:bg-green-700'
+                          : 'bg-red-600 hover:bg-red-700'
+                      }`}
+                    >
+                      {confirmAction.currentStatut === 'bloque' ? 'Débloquer' : 'Bloquer'}
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* Modal de Suppression */}
+          {showDeleteModal && agentToDelete && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fadeIn">
+              <Card className="max-w-md w-full animate-scaleIn">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <AlertTriangle className="text-red-600" size={32} />
+                  </div>
+                  
+                  <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                    Supprimer cet agent ?
+                  </h2>
+                  
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-yellow-800 font-semibold">
+                      ⚠️ ATTENTION : Cette action est IRRÉVERSIBLE !
+                    </p>
+                  </div>
+
+                  <div className="text-left mb-4 bg-gray-50 p-3 rounded-lg">
+                    <p className="text-sm font-semibold text-gray-700 mb-1">Agent à supprimer :</p>
+                    <p className="text-sm text-gray-600">{agentToDelete.prenom} {agentToDelete.nom}</p>
+                    <p className="text-xs text-gray-500">{agentToDelete.email}</p>
+                  </div>
+
+                  <div className="text-left mb-6">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Raison de la suppression (facultatif)
+                    </label>
+                    <textarea
+                      value={deleteReason}
+                      onChange={(e) => setDeleteReason(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                      rows={3}
+                      placeholder="Ex: Démission, fin de contrat, doublon..."
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Cette raison sera enregistrée dans les logs
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={cancelDelete}
+                      variant="outline"
+                      className="flex-1"
+                      disabled={deleting}
+                    >
+                      Annuler
+                    </Button>
+                    <Button
+                      onClick={executeDelete}
+                      className="flex-1 bg-red-600 hover:bg-red-700"
+                      disabled={deleting}
+                    >
+                      {deleting ? (
+                        <>
+                          <div className="spinner mr-2" style={{width: 16, height: 16}}></div>
+                          Suppression...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 size={18} className="mr-2" />
+                          Supprimer
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </Card>
             </div>
           )}

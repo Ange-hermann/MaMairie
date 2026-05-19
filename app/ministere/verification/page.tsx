@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
+import { QRScanner } from '@/components/QRScanner'
 
 export default function VerificationActesPage() {
   const router = useRouter()
@@ -37,6 +38,7 @@ export default function VerificationActesPage() {
   const [searchType, setSearchType] = useState('numero')
   const [searchValue, setSearchValue] = useState('')
   const [typeActe, setTypeActe] = useState('naissance')
+  const [showQRScanner, setShowQRScanner] = useState(false)
   
   const [resultat, setResultat] = useState<any>(null)
   const [historique, setHistorique] = useState<any[]>([])
@@ -129,8 +131,13 @@ export default function VerificationActesPage() {
     setResultat(null)
 
     try {
+      if (!searchValue.trim()) {
+        throw new Error('Veuillez entrer un numéro d\'acte')
+      }
+
       let acte = null
       let tableName = ''
+      let mairieInfo = null
 
       // Déterminer la table selon le type d'acte
       switch (typeActe) {
@@ -147,79 +154,66 @@ export default function VerificationActesPage() {
           throw new Error('Type d\'acte invalide')
       }
 
-      // Rechercher l'acte
-      if (searchType === 'numero') {
-        const { data } = await supabase
-          .from(tableName)
-          .select(`
-            *,
-            mairies (
-              id,
-              nom,
-              ville,
-              region
-            )
-          `)
-          .eq('numero_acte', searchValue)
+      // Rechercher l'acte par numéro
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .eq('numero_acte', searchValue.trim())
+        .maybeSingle()
+
+      if (error) {
+        console.error('Erreur Supabase:', error)
+        throw new Error('Erreur lors de la recherche dans la base de données')
+      }
+
+      acte = data
+
+      // Si acte trouvé, récupérer les infos de la mairie
+      if (acte && acte.mairie_id) {
+        const { data: mairieData } = await supabase
+          .from('mairies')
+          .select('id, nom_mairie, ville, region')
+          .eq('id', acte.mairie_id)
           .single()
-
-        acte = data
-      } else if (searchType === 'qr') {
-        // Rechercher par hash QR code
-        const { data: verification } = await supabase
-          .from('verifications_actes')
-          .select(`
-            *,
-            mairies (
-              nom,
-              ville
-            )
-          `)
-          .eq('qr_code_hash', searchValue)
-          .single()
-
-        if (verification) {
-          // Récupérer l'acte complet
-          const { data } = await supabase
-            .from(tableName)
-            .select(`
-              *,
-              mairies (
-                id,
-                nom,
-                ville,
-                region
-              )
-            `)
-            .eq('id', verification.acte_id)
-            .single()
-
-          acte = data
-        }
+        
+        mairieInfo = mairieData
       }
 
       if (!acte) {
         setResultat({
           statut: 'invalide',
-          message: 'Acte introuvable dans la base de données nationale',
+          message: `❌ Acte N° ${searchValue} introuvable dans la base de données nationale`,
           details: null,
         })
+        
+        // Enregistrer la tentative de vérification
+        await enregistrerVerification(
+          { numero_acte: searchValue, type_acte: typeActe }, 
+          'invalide'
+        )
       } else {
         // Acte trouvé - Vérifier son authenticité
-        const statut = verifierAuthenticite(acte)
+        const { statut, anomalies } = verifierAuthenticite(acte)
+
+        // Ajouter les infos de la mairie à l'acte
+        const acteComplet = {
+          ...acte,
+          mairies: mairieInfo
+        }
 
         setResultat({
           statut: statut,
           message: statut === 'valide' 
-            ? 'Document authentique et valide' 
+            ? '✅ Document authentique et enregistré dans la base nationale' 
             : statut === 'suspect'
-            ? 'Document suspect - Vérification manuelle requise'
-            : 'Document invalide ou falsifié',
-          details: acte,
+            ? '⚠️ Document suspect - Anomalies détectées, vérification manuelle requise'
+            : '❌ Document invalide ou potentiellement falsifié',
+          details: acteComplet,
+          anomalies: anomalies
         })
 
         // Enregistrer la vérification
-        await enregistrerVerification(acte, statut)
+        await enregistrerVerification(acteComplet, statut, anomalies)
       }
 
       // Rafraîchir les stats et l'historique
@@ -230,7 +224,7 @@ export default function VerificationActesPage() {
       console.error('Erreur:', error)
       setResultat({
         statut: 'erreur',
-        message: 'Erreur lors de la vérification : ' + error.message,
+        message: '⚠️ Erreur lors de la vérification : ' + error.message,
         details: null,
       })
     } finally {
@@ -239,69 +233,138 @@ export default function VerificationActesPage() {
   }
 
   const verifierAuthenticite = (acte: any) => {
-    // Logique de vérification
-    // Pour l'instant, on considère tous les actes comme valides
-    // À améliorer avec des règles métier spécifiques
+    // Vérifier l'authenticité de l'acte avec détection d'anomalies
+    const anomalies: string[] = []
+    let statut: 'valide' | 'suspect' | 'invalide' = 'valide'
 
-    // Vérifier si l'acte a une mairie valide
-    if (!acte.mairies) {
-      return 'suspect'
+    // 1. Vérifier si l'acte a une mairie
+    if (!acte.mairie_id) {
+      anomalies.push('Aucune mairie associée')
+      statut = 'suspect'
     }
 
-    // Vérifier si l'acte a un numéro
+    // 2. Vérifier si l'acte a un numéro
     if (!acte.numero_acte) {
-      return 'suspect'
+      anomalies.push('Numéro d\'acte manquant')
+      statut = 'suspect'
     }
 
-    // Vérifier si l'acte n'est pas trop ancien (> 100 ans pour naissance)
+    // 3. Vérifier les dates selon le type d'acte
     if (typeActe === 'naissance' && acte.date_naissance) {
       const dateNaissance = new Date(acte.date_naissance)
-      const age = (new Date().getTime() - dateNaissance.getTime()) / (1000 * 60 * 60 * 24 * 365)
+      const maintenant = new Date()
+      
+      // Vérifier que la date n'est pas dans le futur
+      if (dateNaissance > maintenant) {
+        anomalies.push('Date de naissance dans le futur')
+        statut = 'suspect'
+      }
+      
+      // Vérifier que la personne n'a pas plus de 120 ans
+      const age = (maintenant.getTime() - dateNaissance.getTime()) / (1000 * 60 * 60 * 24 * 365)
       if (age > 120) {
-        return 'suspect'
+        anomalies.push('Âge supérieur à 120 ans')
+        statut = 'suspect'
       }
     }
 
-    return 'valide'
+    // 4. Vérifier les champs obligatoires selon le type
+    if (typeActe === 'naissance') {
+      if (!acte.nom_enfant || !acte.prenom_enfant) {
+        anomalies.push('Nom ou prénom de l\'enfant manquant')
+        statut = 'suspect'
+      }
+      if (!acte.lieu_naissance) {
+        anomalies.push('Lieu de naissance manquant')
+      }
+    } else if (typeActe === 'mariage') {
+      if (!acte.nom_epoux || !acte.nom_epouse) {
+        anomalies.push('Informations époux/épouse incomplètes')
+        statut = 'suspect'
+      }
+    } else if (typeActe === 'deces') {
+      if (!acte.nom_defunt || !acte.prenom_defunt) {
+        anomalies.push('Nom ou prénom du défunt manquant')
+        statut = 'suspect'
+      }
+    }
+
+    // 5. Vérifier le format du numéro d'acte
+    if (acte.numero_acte && !/^[A-Z0-9\/-]+$/i.test(acte.numero_acte)) {
+      anomalies.push('Format de numéro d\'acte suspect')
+    }
+
+    // 6. Vérifier la cohérence de l'année
+    if (acte.annee) {
+      const anneeActuelle = new Date().getFullYear()
+      if (acte.annee > anneeActuelle) {
+        anomalies.push('Année dans le futur')
+        statut = 'suspect'
+      }
+      if (acte.annee < 1900) {
+        anomalies.push('Année antérieure à 1900')
+      }
+    }
+
+    return { statut, anomalies }
   }
 
-  const enregistrerVerification = async (acte: any, statut: string) => {
+  const enregistrerVerification = async (acte: any, statut: string, anomalies?: string[]) => {
     try {
       // Vérifier si une entrée existe déjà
       const { data: existing } = await supabase
         .from('verifications_actes')
         .select('id, nombre_verifications')
-        .eq('numero_acte', acte.numero_acte)
+        .eq('numero_acte', acte.numero_acte || acte.numero_acte)
         .eq('type_acte', typeActe)
-        .single()
+        .maybeSingle()
+
+      const detailsActe = acte.id ? {
+        id: acte.id,
+        numero_acte: acte.numero_acte,
+        type_acte: typeActe,
+        mairie: acte.mairies?.nom_mairie || null,
+      } : null
 
       if (existing) {
-        // Mettre à jour
-        await supabase
+        // Mettre à jour l'entrée existante
+        const { error } = await supabase
           .from('verifications_actes')
           .update({
             nombre_verifications: existing.nombre_verifications + 1,
             derniere_verification: new Date().toISOString(),
             statut_verification: statut,
+            anomalies: anomalies || [],
+            details_acte: detailsActe,
+            verifie_par: userData?.id,
           })
           .eq('id', existing.id)
+
+        if (error) {
+          console.error('Erreur mise à jour:', error)
+        }
       } else {
         // Créer nouvelle entrée
-        await supabase
+        const { error } = await supabase
           .from('verifications_actes')
           .insert([{
             numero_acte: acte.numero_acte,
             type_acte: typeActe,
-            acte_id: acte.id,
-            mairie_id: acte.mairie_id,
-            qr_code_hash: generateQRHash(acte),
+            mairie_id: acte.mairie_id || null,
             statut_verification: statut,
             nombre_verifications: 1,
             derniere_verification: new Date().toISOString(),
+            anomalies: anomalies || [],
+            details_acte: detailsActe,
+            verifie_par: userData?.id,
           }])
+
+        if (error) {
+          console.error('Erreur insertion:', error)
+        }
       }
     } catch (error) {
-      console.error('Erreur enregistrement:', error)
+      console.error('Erreur enregistrement vérification:', error)
     }
   }
 
@@ -309,6 +372,43 @@ export default function VerificationActesPage() {
     // Générer un hash simple pour le QR code
     // En production, utiliser un vrai algorithme de hash
     return `${typeActe}-${acte.numero_acte}-${acte.id}`.replace(/[^a-zA-Z0-9]/g, '')
+  }
+
+  const handleQRScan = (qrData: string) => {
+    // Le QR code contient le format: TYPE-NUMERO-ID
+    // Ex: NAIS-001-2024-uuid
+    try {
+      const parts = qrData.split('-')
+      if (parts.length >= 2) {
+        // Extraire le type et le numéro
+        const typeMap: any = {
+          'NAIS': 'naissance',
+          'MAR': 'mariage',
+          'DEC': 'deces'
+        }
+        
+        const scannedType = typeMap[parts[0]] || 'naissance'
+        const numeroActe = parts.slice(1, -1).join('-') // Tout sauf le premier et dernier élément
+        
+        setTypeActe(scannedType)
+        setSearchValue(numeroActe)
+        setSearchType('numero')
+        
+        // Lancer automatiquement la vérification
+        setTimeout(() => {
+          const form = document.querySelector('form') as HTMLFormElement
+          if (form) {
+            form.requestSubmit()
+          }
+        }, 100)
+      } else {
+        // Si le format ne correspond pas, utiliser directement comme numéro
+        setSearchValue(qrData)
+      }
+    } catch (error) {
+      console.error('Erreur parsing QR:', error)
+      setSearchValue(qrData)
+    }
   }
 
   const getStatutIcon = (statut: string) => {
@@ -478,6 +578,22 @@ export default function VerificationActesPage() {
                   )}
                 </Button>
               </form>
+
+              {/* Bouton Scanner QR */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowQRScanner(true)}
+                >
+                  <QrCode size={20} className="mr-2" />
+                  Scanner un QR Code
+                </Button>
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  Scannez le QR Code présent sur le document PDF
+                </p>
+              </div>
             </Card>
 
             {/* Résultat de la Vérification */}
@@ -633,6 +749,14 @@ export default function VerificationActesPage() {
           </Card>
         </main>
       </div>
+
+      {/* Scanner QR Code */}
+      {showQRScanner && (
+        <QRScanner
+          onScan={handleQRScan}
+          onClose={() => setShowQRScanner(false)}
+        />
+      )}
     </div>
   )
 }

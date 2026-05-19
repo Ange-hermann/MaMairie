@@ -110,8 +110,22 @@ self.addEventListener('notificationclick', (event) => {
   console.log('👆 Clic sur notification')
   event.notification.close()
 
+  const urlToOpen = event.notification.data?.url || '/'
+
   event.waitUntil(
-    clients.openWindow('/')
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Si une fenêtre est déjà ouverte, la focus
+        for (const client of clientList) {
+          if (client.url.includes(urlToOpen) && 'focus' in client) {
+            return client.focus()
+          }
+        }
+        // Sinon, ouvrir une nouvelle fenêtre
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen)
+        }
+      })
   )
 })
 

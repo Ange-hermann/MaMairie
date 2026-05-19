@@ -33,6 +33,7 @@ export default function AlertesMinisterePage() {
   const [userData, setUserData] = useState<any>(null)
   const [alertes, setAlertes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [detecting, setDetecting] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedType, setSelectedType] = useState('all')
   const [selectedSeverite, setSelectedSeverite] = useState('all')
@@ -83,24 +84,23 @@ export default function AlertesMinisterePage() {
 
   const fetchAlertes = async () => {
     try {
-      const { data: alertesData } = await supabase
+      const { data: alertesData, error } = await supabase
         .from('alertes_ministere')
         .select(`
           *,
           mairies (
             id,
-            nom,
+            nom_mairie,
             ville,
             region
-          ),
-          users!alertes_ministere_agent_id_fkey (
-            id,
-            nom,
-            prenom,
-            email
           )
         `)
         .order('date_detection', { ascending: false })
+
+      if (error) {
+        console.error('Erreur Supabase:', error)
+        throw error
+      }
 
       if (alertesData) {
         setAlertes(alertesData)
@@ -115,103 +115,33 @@ export default function AlertesMinisterePage() {
         setStats(statsData)
       }
 
-      // Détecter nouvelles anomalies
-      await detecterAnomalies()
-
     } catch (error) {
-      console.error('Erreur:', error)
+      console.error('Erreur fetchAlertes:', error)
     }
   }
 
   const detecterAnomalies = async () => {
+    setDetecting(true)
     try {
-      // 1. Détecter les retards importants
-      const { data: demandesEnRetard } = await supabase
-        .from('requests')
-        .select('id, mairie_id, created_at')
-        .eq('statut', 'en_attente')
-        .lt('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+      // Appeler la fonction SQL de détection automatique
+      const { data, error } = await supabase.rpc('executer_detection_fraudes')
 
-      if (demandesEnRetard && demandesEnRetard.length > 0) {
-        // Grouper par mairie
-        const mairiesRetard = demandesEnRetard.reduce((acc: any, demande) => {
-          if (!acc[demande.mairie_id]) {
-            acc[demande.mairie_id] = []
-          }
-          acc[demande.mairie_id].push(demande)
-          return acc
-        }, {})
-
-        // Créer alertes pour mairies avec plus de 10 demandes en retard
-        for (const [mairieId, demandes] of Object.entries(mairiesRetard)) {
-          const demandesArray = demandes as any[]
-          if (demandesArray.length >= 10) {
-            // Vérifier si alerte existe déjà
-            const { data: existingAlerte } = await supabase
-              .from('alertes_ministere')
-              .select('id')
-              .eq('type', 'retard')
-              .eq('mairie_id', mairieId)
-              .eq('statut', 'nouvelle')
-              .single()
-
-            if (!existingAlerte) {
-              await supabase
-                .from('alertes_ministere')
-                .insert([{
-                  type: 'retard',
-                  severite: demandesArray.length > 20 ? 'critique' : 'haute',
-                  mairie_id: mairieId,
-                  titre: 'Retard important dans le traitement des demandes',
-                  description: `${demandesArray.length} demandes en attente depuis plus de 7 jours`,
-                  statut: 'nouvelle',
-                }])
-            }
-          }
-        }
+      if (error) {
+        console.error('Erreur lors de la détection:', error)
+        throw error
       }
 
-      // 2. Détecter les mairies inactives
-      const { data: mairies } = await supabase
-        .from('mairies')
-        .select('id, nom')
+      // Rafraîchir la liste des alertes
+      await fetchAlertes()
 
-      if (mairies) {
-        for (const mairie of mairies) {
-          const { data: activiteRecente } = await supabase
-            .from('requests')
-            .select('id')
-            .eq('mairie_id', mairie.id)
-            .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+      // Afficher un message de succès
+      alert('✅ Détection des anomalies terminée ! Consultez les nouvelles alertes.')
 
-          if (!activiteRecente || activiteRecente.length === 0) {
-            // Vérifier si alerte existe déjà
-            const { data: existingAlerte } = await supabase
-              .from('alertes_ministere')
-              .select('id')
-              .eq('type', 'inactivite')
-              .eq('mairie_id', mairie.id)
-              .eq('statut', 'nouvelle')
-              .single()
-
-            if (!existingAlerte) {
-              await supabase
-                .from('alertes_ministere')
-                .insert([{
-                  type: 'inactivite',
-                  severite: 'moyenne',
-                  mairie_id: mairie.id,
-                  titre: 'Mairie inactive',
-                  description: 'Aucune activité détectée depuis 30 jours',
-                  statut: 'nouvelle',
-                }])
-            }
-          }
-        }
-      }
-
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur détection anomalies:', error)
+      alert('❌ Erreur lors de la détection des anomalies : ' + error.message)
+    } finally {
+      setDetecting(false)
     }
   }
 
@@ -315,11 +245,21 @@ export default function AlertesMinisterePage() {
             </div>
             
             <Button
-              onClick={() => fetchAlertes()}
+              onClick={detecterAnomalies}
               className="btn-ripple hover-glow"
+              disabled={detecting}
             >
-              <Shield size={20} className="mr-2" />
-              Détecter Anomalies
+              {detecting ? (
+                <>
+                  <div className="spinner mr-2" style={{width: 20, height: 20}}></div>
+                  Détection en cours...
+                </>
+              ) : (
+                <>
+                  <Shield size={20} className="mr-2" />
+                  Détecter Anomalies
+                </>
+              )}
             </Button>
           </div>
 

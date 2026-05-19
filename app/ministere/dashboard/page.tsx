@@ -198,15 +198,41 @@ export default function DashboardMinisterePage() {
       setMairiesData(mairiesWithStats)
       setAlertes(alertesData || [])
 
-      // Performance par région (simulé)
-      const regionsPerf = [
-        { region: 'Abidjan', demandes: 450, naissances: 120, mariages: 45, deces: 18 },
-        { region: 'Bouaké', demandes: 180, naissances: 60, mariages: 22, deces: 8 },
-        { region: 'Yamoussoukro', demandes: 120, naissances: 40, mariages: 15, deces: 5 },
-        { region: 'San-Pédro', demandes: 90, naissances: 30, mariages: 12, deces: 4 },
-        { region: 'Korhogo', demandes: 75, naissances: 25, mariages: 10, deces: 3 },
-      ]
-      setPerformanceRegions(regionsPerf)
+      console.log('📊 Calcul des performances par région...')
+      
+      // Grouper les mairies par région
+      const regionMap = new Map<string, string[]>()
+      mairies?.forEach((mairie: any) => {
+        if (mairie.region) {
+          if (!regionMap.has(mairie.region)) {
+            regionMap.set(mairie.region, [])
+          }
+          regionMap.get(mairie.region)!.push(mairie.id)
+        }
+      })
+
+      // Calculer les stats pour chaque région
+      const regionsPerf = await Promise.all(
+        Array.from(regionMap.entries()).map(async ([regionNom, mairieIds]) => {
+          const [naissancesCount, mariagesCount, decesCount, demandesCount] = await Promise.all([
+            supabase.from('naissances').select('*', { count: 'exact', head: true }).in('mairie_id', mairieIds),
+            supabase.from('mariages').select('*', { count: 'exact', head: true }).in('mairie_id', mairieIds),
+            supabase.from('deces').select('*', { count: 'exact', head: true }).in('mairie_id', mairieIds),
+            supabase.from('requests').select('*', { count: 'exact', head: true }).in('mairie_id', mairieIds)
+          ])
+
+          return {
+            region: regionNom,
+            naissances: naissancesCount.count || 0,
+            mariages: mariagesCount.count || 0,
+            deces: decesCount.count || 0,
+            demandes: demandesCount.count || 0
+          }
+        })
+      )
+
+      console.log('✅ Performances par région:', regionsPerf)
+      setPerformanceRegions(regionsPerf.sort((a, b) => (b.demandes + b.naissances) - (a.demandes + a.naissances)))
 
     } catch (error) {
       console.error('Erreur:', error)

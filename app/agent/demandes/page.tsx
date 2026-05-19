@@ -22,6 +22,9 @@ export default function DemandesAgentPage() {
   const [filterStatut, setFilterStatut] = useState('tous')
   const [selectedDemande, setSelectedDemande] = useState<any>(null)
   const [showModal, setShowModal] = useState(false)
+  const [showRejetModal, setShowRejetModal] = useState(false)
+  const [motifRejet, setMotifRejet] = useState('')
+  const [motifAutre, setMotifAutre] = useState('')
 
   useEffect(() => {
     fetchData()
@@ -77,6 +80,49 @@ export default function DemandesAgentPage() {
       alert(`✅ Statut mis à jour: ${getStatutLabel(newStatut)}`)
       fetchData()
       setShowModal(false)
+    } catch (error: any) {
+      alert('❌ Erreur : ' + error.message)
+    }
+  }
+
+  const handleRejet = async () => {
+    // Validation du motif
+    const motifFinal = motifRejet === 'autre' ? motifAutre : motifRejet
+    
+    if (!motifFinal || motifFinal.trim() === '') {
+      alert('⚠️ Le motif de rejet est obligatoire')
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('requests')
+        .update({ 
+          statut: 'rejetee',
+          motif_rejet: motifFinal,
+          date_rejet: new Date().toISOString()
+        })
+        .eq('id', selectedDemande.id)
+
+      if (error) throw error
+
+      // Créer une notification pour le citoyen
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: selectedDemande.user_id,
+          titre: 'Demande rejetée',
+          message: `Votre demande d'extrait de ${selectedDemande.type_acte} a été rejetée. Motif: ${motifFinal}`,
+          type: 'demande_rejetee',
+          lue: false
+        })
+      
+      alert('✅ Demande rejetée avec succès')
+      setShowRejetModal(false)
+      setShowModal(false)
+      setMotifRejet('')
+      setMotifAutre('')
+      fetchData()
     } catch (error: any) {
       alert('❌ Erreur : ' + error.message)
     }
@@ -402,13 +448,103 @@ export default function DemandesAgentPage() {
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => handleUpdateStatut(selectedDemande.id, 'rejetee')}
+                      onClick={() => setShowRejetModal(true)}
                       className="flex-1 text-red-600 border-red-600 hover:bg-red-50"
                     >
                       Rejeter
                     </Button>
                   </>
                 )}
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal de Rejet avec Motif */}
+      {showRejetModal && selectedDemande && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <Card className="max-w-md w-full">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <XCircle className="text-red-600" size={28} />
+                Rejeter la Demande
+              </h2>
+              <button
+                onClick={() => {
+                  setShowRejetModal(false)
+                  setMotifRejet('')
+                  setMotifAutre('')
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-sm text-red-800">
+                  <strong>Attention :</strong> Cette action rejettera définitivement la demande. 
+                  Le citoyen sera notifié du rejet avec le motif que vous indiquez.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Motif du rejet <span className="text-red-600">*</span>
+                </label>
+                <Select
+                  label=""
+                  value={motifRejet}
+                  onChange={(e) => setMotifRejet(e.target.value)}
+                  options={[
+                    { value: '', label: 'Sélectionner un motif' },
+                    { value: 'Informations incorrectes', label: 'Informations incorrectes' },
+                    { value: 'Documents incomplets', label: 'Documents incomplets' },
+                    { value: 'Faux documents soumis', label: 'Faux documents soumis' },
+                    { value: 'Documents illisibles', label: 'Documents illisibles' },
+                    { value: 'Acte introuvable dans les registres', label: 'Acte introuvable dans les registres' },
+                    { value: 'Demande en doublon', label: 'Demande en doublon' },
+                    { value: 'autre', label: 'Autre (préciser)' },
+                  ]}
+                />
+              </div>
+
+              {motifRejet === 'autre' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Précisez le motif <span className="text-red-600">*</span>
+                  </label>
+                  <textarea
+                    value={motifAutre}
+                    onChange={(e) => setMotifAutre(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    rows={3}
+                    placeholder="Veuillez préciser le motif du rejet..."
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowRejetModal(false)
+                    setMotifRejet('')
+                    setMotifAutre('')
+                  }}
+                  className="flex-1"
+                >
+                  Annuler
+                </Button>
+                <Button
+                  onClick={handleRejet}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  disabled={!motifRejet || (motifRejet === 'autre' && !motifAutre.trim())}
+                >
+                  Confirmer le Rejet
+                </Button>
               </div>
             </div>
           </Card>

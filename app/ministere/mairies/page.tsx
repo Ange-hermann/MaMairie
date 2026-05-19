@@ -37,6 +37,9 @@ export default function MairiesMinisterePage() {
   const [selectedStatut, setSelectedStatut] = useState('all')
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<{mairieId: string, currentStatut: string} | null>(null)
+  const [togglingStatut, setTogglingStatut] = useState<string | null>(null)
   
   const [formData, setFormData] = useState({
     nom: '',
@@ -213,12 +216,19 @@ export default function MairiesMinisterePage() {
     setShowForm(true)
   }
 
-  const toggleStatut = async (mairieId: string, currentStatut: string) => {
+  const toggleStatut = (mairieId: string, currentStatut: string) => {
+    setConfirmAction({ mairieId, currentStatut })
+    setShowConfirmModal(true)
+  }
+
+  const executeToggleStatut = async () => {
+    if (!confirmAction) return
+    
+    const { mairieId, currentStatut } = confirmAction
     const newStatut = currentStatut === 'active' ? 'inactive' : 'active'
     
-    if (!confirm(`Voulez-vous ${newStatut === 'active' ? 'activer' : 'désactiver'} cette mairie ?`)) {
-      return
-    }
+    setShowConfirmModal(false)
+    setTogglingStatut(mairieId)
 
     try {
       const { error } = await supabase
@@ -228,11 +238,19 @@ export default function MairiesMinisterePage() {
 
       if (error) throw error
       
-      alert(`✅ Mairie ${newStatut === 'active' ? 'activée' : 'désactivée'}`)
-      fetchMairies()
+      await fetchMairies()
+      alert(`✅ Mairie ${newStatut === 'active' ? 'activée' : 'désactivée'} avec succès`)
     } catch (error: any) {
       alert('❌ Erreur : ' + error.message)
+    } finally {
+      setTogglingStatut(null)
+      setConfirmAction(null)
     }
+  }
+
+  const cancelToggleStatut = () => {
+    setShowConfirmModal(false)
+    setConfirmAction(null)
   }
 
   const resetForm = () => {
@@ -457,8 +475,13 @@ export default function MairiesMinisterePage() {
                                 : 'text-green-600 hover:bg-green-50'
                             }`}
                             title={mairie.statut === 'active' ? 'Désactiver' : 'Activer'}
+                            disabled={togglingStatut === mairie.id}
                           >
-                            <Power size={18} />
+                            {togglingStatut === mairie.id ? (
+                              <div className="spinner" style={{width: 18, height: 18}}></div>
+                            ) : (
+                              <Power size={18} />
+                            )}
                           </button>
                         </div>
                       </td>
@@ -584,6 +607,61 @@ export default function MairiesMinisterePage() {
                     </Button>
                   </div>
                 </form>
+              </Card>
+            </div>
+          )}
+
+          {/* Modal de Confirmation Activer/Désactiver */}
+          {showConfirmModal && confirmAction && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fadeIn">
+              <Card className="max-w-md w-full animate-scaleIn">
+                <div className="text-center">
+                  {confirmAction.currentStatut === 'active' ? (
+                    <>
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Power className="text-gray-600" size={32} />
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                        Désactiver cette mairie ?
+                      </h2>
+                      <p className="text-gray-600 mb-6">
+                        La mairie ne pourra plus traiter de demandes ni enregistrer d'actes.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <CheckCircle className="text-green-600" size={32} />
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                        Activer cette mairie ?
+                      </h2>
+                      <p className="text-gray-600 mb-6">
+                        La mairie pourra à nouveau traiter des demandes et enregistrer des actes.
+                      </p>
+                    </>
+                  )}
+
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={cancelToggleStatut}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Annuler
+                    </Button>
+                    <Button
+                      onClick={executeToggleStatut}
+                      className={`flex-1 ${
+                        confirmAction.currentStatut === 'active'
+                          ? 'bg-gray-600 hover:bg-gray-700'
+                          : 'bg-green-600 hover:bg-green-700'
+                      }`}
+                    >
+                      {confirmAction.currentStatut === 'active' ? 'Désactiver' : 'Activer'}
+                    </Button>
+                  </div>
+                </div>
               </Card>
             </div>
           )}
