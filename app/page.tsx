@@ -55,7 +55,7 @@ export default function Home() {
             <video
               className="w-full h-full object-cover"
               controls
-              poster="/logo-mamairie.png"
+              preload="metadata"
             >
               <source src="/video.mp4" type="video/mp4" />
               Votre navigateur ne supporte pas la lecture de vidéos.
