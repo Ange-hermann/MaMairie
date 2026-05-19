@@ -28,6 +28,34 @@ export default function DemandesAgentPage() {
 
   useEffect(() => {
     fetchData()
+
+    // Rechargement automatique toutes les 30 secondes
+    const interval = setInterval(() => {
+      fetchData()
+    }, 30000)
+
+    // Écouter les changements en temps réel avec Supabase Realtime
+    const channel = supabase
+      .channel('requests-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Écouter tous les événements (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'requests'
+        },
+        (payload) => {
+          console.log('🔔 Changement détecté:', payload)
+          fetchData() // Recharger les données
+        }
+      )
+      .subscribe()
+
+    // Nettoyer à la destruction du composant
+    return () => {
+      clearInterval(interval)
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const fetchData = async () => {

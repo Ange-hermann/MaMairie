@@ -72,6 +72,34 @@ export default function MesDemandesPage() {
     }
 
     fetchData()
+
+    // Rechargement automatique toutes les 30 secondes
+    const interval = setInterval(() => {
+      fetchData()
+    }, 30000)
+
+    // Écouter les changements en temps réel
+    const channel = supabase
+      .channel('my-requests-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'requests'
+        },
+        (payload) => {
+          console.log('🔔 Nouvelle notification:', payload)
+          fetchData()
+        }
+      )
+      .subscribe()
+
+    // Nettoyer
+    return () => {
+      clearInterval(interval)
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const getStatusBadge = (statut: string) => {

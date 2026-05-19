@@ -366,20 +366,27 @@ export default function DemandeExtraitPage() {
                 />
 
                 {/* Composant Upload de Document */}
-                <FileUpload
-                  onFileUploaded={(url, name) => {
-                    setDocumentUrl(url)
-                    setDocumentName(name)
-                  }}
-                  onFileRemoved={() => {
-                    setDocumentUrl(null)
-                    setDocumentName(null)
-                  }}
-                  accept="image/*,.pdf"
-                  maxSizeMB={5}
-                  label="Ancien Acte (Optionnel)"
-                  helpText="Téléchargez une photo de votre ancien acte ou un PDF (max 5MB)"
-                />
+                <div>
+                  <FileUpload
+                    onFileUploaded={(url, name) => {
+                      setDocumentUrl(url)
+                      setDocumentName(name)
+                    }}
+                    onFileRemoved={() => {
+                      setDocumentUrl(null)
+                      setDocumentName(null)
+                    }}
+                    accept="image/*,.pdf"
+                    maxSizeMB={5}
+                    label="Ancien Acte (Obligatoire)"
+                    helpText="Téléchargez une photo de votre ancien acte ou un PDF (max 5MB)"
+                  />
+                  {!documentUrl && (
+                    <p className="text-xs text-red-600 mt-1">
+                      ⚠️ L'upload de l'ancien acte est obligatoire pour traiter votre demande
+                    </p>
+                  )}
+                </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h3 className="font-medium text-blue-900 mb-2">
@@ -390,7 +397,7 @@ export default function DemandeExtraitPage() {
                     <li>• Le traitement de votre demande prendra 2-5 jours ouvrables</li>
                     <li>• Vous recevrez une notification par email et SMS</li>
                     <li>• Frais de traitement : 1,000 FCFA</li>
-                    <li>• L'upload d'un ancien acte peut accélérer le traitement</li>
+                    <li>• ⚠️ L'upload de l'ancien acte est obligatoire</li>
                   </ul>
                 </div>
 
@@ -398,7 +405,7 @@ export default function DemandeExtraitPage() {
                   <Button
                     type="submit"
                     variant="primary"
-                    disabled={loading}
+                    disabled={loading || !documentUrl}
                     className="flex-1"
                   >
                     {loading ? 'Soumission en cours...' : 'Soumettre la Demande'}
