@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Logo } from '@/components/layout/Logo'
 import { Button } from '@/components/ui/Button'
-import { FileText, Shield, Zap, Globe, Play } from 'lucide-react'
+import { FileText, Shield, Zap, Globe } from 'lucide-react'
 
 export default function Home() {
   return (
@@ -52,25 +52,14 @@ export default function Home() {
             Découvrez MaMairie en vidéo
           </h2>
           <div className="relative bg-gray-900 rounded-lg md:rounded-2xl overflow-hidden shadow-2xl aspect-video">
-            {/* Placeholder vidéo - Remplacer par votre vraie vidéo */}
-            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary-600 to-secondary-600">
-              <div className="text-center text-white">
-                <div className="w-16 h-16 md:w-20 md:h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4 backdrop-blur-sm hover:bg-opacity-30 transition cursor-pointer">
-                  <Play size={32} className="md:w-10 md:h-10 ml-1" />
-                </div>
-                <p className="text-sm md:text-lg font-semibold">Cliquez pour voir la démo</p>
-                <p className="text-xs md:text-sm opacity-75 mt-1 md:mt-2">2 minutes pour tout comprendre</p>
-              </div>
-            </div>
-            {/* Pour ajouter une vraie vidéo YouTube ou autre :
-            <iframe
-              className="w-full h-full"
-              src="https://www.youtube.com/embed/VOTRE_VIDEO_ID"
-              title="MaMairie Demo"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-            */}
+            <video
+              className="w-full h-full object-cover"
+              controls
+              poster="/logo-mamairie.png"
+            >
+              <source src="/video.mp4" type="video/mp4" />
+              Votre navigateur ne supporte pas la lecture de vidéos.
+            </video>
           </div>
           <p className="text-center text-xs md:text-sm text-gray-500 mt-3 md:mt-4">
             Voyez comment MaMairie transforme les démarches administratives
