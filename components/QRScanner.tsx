@@ -6,6 +6,7 @@ import { Button } from './ui/Button'
 import dynamic from 'next/dynamic'
 
 // Charger QrScanner dynamiquement (côté client uniquement)
+// @ts-ignore - react-qr-scanner n'a pas de types officiels
 const QrScanner = dynamic(() => import('react-qr-scanner'), { ssr: false })
 
 interface QRScannerProps {
