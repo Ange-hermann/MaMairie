@@ -20,7 +20,10 @@ export default function DemandeExtraitPage() {
   const [documentName, setDocumentName] = useState<string | null>(null)
   const [mairies, setMairies] = useState<any[]>([])
   
+  const [typeActe, setTypeActe] = useState<'naissance' | 'mariage' | 'deces'>('naissance')
+  
   const [formData, setFormData] = useState({
+    numero_acte: '',
     nom: '',
     prenom: '',
     date_naissance: '',
@@ -29,6 +32,15 @@ export default function DemandeExtraitPage() {
     nom_mere: '',
     telephone: '',
     mairie_id: '',
+    // Pour mariage
+    nom_conjoint: '',
+    prenom_conjoint: '',
+    date_mariage: '',
+    lieu_mariage: '',
+    // Pour décès
+    date_deces: '',
+    lieu_deces: '',
+    cause_deces: '',
   })
 
   useEffect(() => {
@@ -85,26 +97,42 @@ export default function DemandeExtraitPage() {
         throw new Error('Vous devez être connecté')
       }
 
+      // Préparer les données selon le type d'acte
+      const requestData: any = {
+        user_id: user.id,
+        type_acte: typeActe,
+        numero_acte: formData.numero_acte || null,
+        nom: formData.nom,
+        prenom: formData.prenom,
+        telephone: formData.telephone,
+        mairie_id: formData.mairie_id || null,
+        document_url: documentUrl,
+        document_name: documentName,
+        statut: 'en_attente',
+      }
+
+      // Ajouter les champs spécifiques selon le type
+      if (typeActe === 'naissance') {
+        requestData.date_naissance = formData.date_naissance
+        requestData.lieu_naissance = formData.lieu_naissance
+        requestData.nom_pere = formData.nom_pere
+        requestData.nom_mere = formData.nom_mere
+      } else if (typeActe === 'mariage') {
+        requestData.date_mariage = formData.date_mariage
+        requestData.lieu_mariage = formData.lieu_mariage
+        requestData.nom_conjoint = formData.nom_conjoint
+        requestData.prenom_conjoint = formData.prenom_conjoint
+      } else if (typeActe === 'deces') {
+        requestData.date_deces = formData.date_deces
+        requestData.lieu_deces = formData.lieu_deces
+        requestData.date_naissance = formData.date_naissance
+        requestData.cause_deces = formData.cause_deces
+      }
+
       // Créer la demande dans Supabase
       const { data, error } = await supabase
         .from('requests')
-        .insert([
-          {
-            user_id: user.id,
-            type_acte: 'naissance',
-            nom: formData.nom,
-            prenom: formData.prenom,
-            date_naissance: formData.date_naissance,
-            lieu_naissance: formData.lieu_naissance,
-            nom_pere: formData.nom_pere,
-            nom_mere: formData.nom_mere,
-            telephone: formData.telephone,
-            mairie_id: formData.mairie_id || null,
-            document_url: documentUrl,
-            document_name: documentName,
-            statut: 'en_attente',
-          }
-        ])
+        .insert([requestData])
         .select()
 
       if (error) throw error
@@ -135,7 +163,7 @@ export default function DemandeExtraitPage() {
           <div className="max-w-4xl mx-auto">
             <div className="mb-4 md:mb-6">
               <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
-                Demander un Extrait d'Acte de Naissance
+                Demander un Extrait d'Acte {typeActe === 'naissance' ? 'de Naissance' : typeActe === 'mariage' ? 'de Mariage' : 'de Décès'}
               </h1>
               <p className="text-sm md:text-base text-gray-600">
                 Remplissez le formulaire ci-dessous pour faire votre demande
@@ -144,6 +172,34 @@ export default function DemandeExtraitPage() {
 
             <Card>
               <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
+                {/* Sélecteur de type d'acte */}
+                <Select
+                  label="Type d'Acte"
+                  options={[
+                    { value: 'naissance', label: '📄 Acte de Naissance' },
+                    { value: 'mariage', label: '💍 Acte de Mariage' },
+                    { value: 'deces', label: '⚰️ Acte de Décès' },
+                  ]}
+                  value={typeActe}
+                  onChange={(e) => setTypeActe(e.target.value as any)}
+                  required
+                />
+
+                {/* Numéro d'acte */}
+                <div>
+                  <Input
+                    label="Numéro d'Acte"
+                    type="text"
+                    placeholder="Ex: 1234567890"
+                    value={formData.numero_acte}
+                    onChange={(e) => setFormData({ ...formData, numero_acte: e.target.value })}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 Le numéro d'acte se trouve sur votre ancien document d'état civil
+                  </p>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   <Input
                     label="Nom"
@@ -164,44 +220,133 @@ export default function DemandeExtraitPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                  <Input
-                    label="Date de Naissance"
-                    type="date"
-                    value={formData.date_naissance}
-                    onChange={(e) => setFormData({ ...formData, date_naissance: e.target.value })}
-                    required
-                  />
-                  
-                  <Input
-                    label="Lieu de Naissance"
-                    type="text"
-                    placeholder="Abidjan"
-                    value={formData.lieu_naissance}
-                    onChange={(e) => setFormData({ ...formData, lieu_naissance: e.target.value })}
-                    required
-                  />
-                </div>
+                {/* Champs spécifiques selon le type d'acte */}
+                {typeActe === 'naissance' && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                      <Input
+                        label="Date de Naissance"
+                        type="date"
+                        value={formData.date_naissance}
+                        onChange={(e) => setFormData({ ...formData, date_naissance: e.target.value })}
+                        required
+                      />
+                      
+                      <Input
+                        label="Lieu de Naissance"
+                        type="text"
+                        placeholder="Abidjan"
+                        value={formData.lieu_naissance}
+                        onChange={(e) => setFormData({ ...formData, lieu_naissance: e.target.value })}
+                        required
+                      />
+                    </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
-                  <Input
-                    label="Nom du Père"
-                    type="text"
-                    placeholder="Kouadio Yao"
-                    value={formData.nom_pere}
-                    onChange={(e) => setFormData({ ...formData, nom_pere: e.target.value })}
-                    required
-                  />
-                  
-                  <Input
-                    label="Nom de la Mère"
-                    type="text"
-                    placeholder="N'Guessan Aya"
-                    value={formData.nom_mere}
-                    onChange={(e) => setFormData({ ...formData, nom_mere: e.target.value })}
-                    required
-                  />
-                </div>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <Input
+                        label="Nom du Père"
+                        type="text"
+                        placeholder="Kouadio Yao"
+                        value={formData.nom_pere}
+                        onChange={(e) => setFormData({ ...formData, nom_pere: e.target.value })}
+                        required
+                      />
+                      
+                      <Input
+                        label="Nom de la Mère"
+                        type="text"
+                        placeholder="N'Guessan Aya"
+                        value={formData.nom_mere}
+                        onChange={(e) => setFormData({ ...formData, nom_mere: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </>
+                )}
+
+                {typeActe === 'mariage' && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                      <Input
+                        label="Date du Mariage"
+                        type="date"
+                        value={formData.date_mariage}
+                        onChange={(e) => setFormData({ ...formData, date_mariage: e.target.value })}
+                        required
+                      />
+                      
+                      <Input
+                        label="Lieu du Mariage"
+                        type="text"
+                        placeholder="Abidjan"
+                        value={formData.lieu_mariage}
+                        onChange={(e) => setFormData({ ...formData, lieu_mariage: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <Input
+                        label="Nom du Conjoint"
+                        type="text"
+                        placeholder="Kouadio"
+                        value={formData.nom_conjoint}
+                        onChange={(e) => setFormData({ ...formData, nom_conjoint: e.target.value })}
+                        required
+                      />
+                      
+                      <Input
+                        label="Prénom du Conjoint"
+                        type="text"
+                        placeholder="Marie"
+                        value={formData.prenom_conjoint}
+                        onChange={(e) => setFormData({ ...formData, prenom_conjoint: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </>
+                )}
+
+                {typeActe === 'deces' && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                      <Input
+                        label="Date de Naissance"
+                        type="date"
+                        value={formData.date_naissance}
+                        onChange={(e) => setFormData({ ...formData, date_naissance: e.target.value })}
+                        required
+                      />
+                      
+                      <Input
+                        label="Date du Décès"
+                        type="date"
+                        value={formData.date_deces}
+                        onChange={(e) => setFormData({ ...formData, date_deces: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <Input
+                        label="Lieu du Décès"
+                        type="text"
+                        placeholder="Abidjan"
+                        value={formData.lieu_deces}
+                        onChange={(e) => setFormData({ ...formData, lieu_deces: e.target.value })}
+                        required
+                      />
+                      
+                      <Input
+                        label="Cause du Décès (Optionnel)"
+                        type="text"
+                        placeholder="Maladie"
+                        value={formData.cause_deces}
+                        onChange={(e) => setFormData({ ...formData, cause_deces: e.target.value })}
+                      />
+                    </div>
+                  </>
+                )}
 
                 <Input
                   label="Téléphone"

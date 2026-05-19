@@ -204,8 +204,8 @@ export const generateActeNaissance = async (
 ): Promise<Blob> => {
   const doc = new jsPDF()
   
-  // QR Code de téléchargement (pour accéder au PDF de l'extrait)
-  const qrCodeDataUrl = await generateDownloadQRCode(naissance.id, 'naissance')
+  // QR Code de vérification (contient le numéro d'acte)
+  const qrCodeDataUrl = await generateVerificationQRCode(naissance.numero_acte)
   
   // En-tête
   addHeader(doc, mairie, 'Extrait d\'Acte de Naissance')
@@ -280,8 +280,8 @@ export const generateActeMariage = async (
 ): Promise<Blob> => {
   const doc = new jsPDF()
   
-  // QR Code de téléchargement (pour accéder au PDF de l'extrait)
-  const qrCodeDataUrl = await generateDownloadQRCode(mariage.id, 'mariage')
+  // QR Code de vérification (contient le numéro d'acte)
+  const qrCodeDataUrl = await generateVerificationQRCode(mariage.numero_acte)
   
   // En-tête
   addHeader(doc, mairie, 'Extrait d\'Acte de Mariage')
@@ -364,8 +364,8 @@ export const generateActeDeces = async (
 ): Promise<Blob> => {
   const doc = new jsPDF()
   
-  // QR Code de téléchargement (pour accéder au PDF de l'extrait)
-  const qrCodeDataUrl = await generateDownloadQRCode(deces.id, 'deces')
+  // QR Code de vérification (contient le numéro d'acte)
+  const qrCodeDataUrl = await generateVerificationQRCode(deces.numero_acte)
   
   // En-tête
   addHeader(doc, mairie, 'Extrait d\'Acte de Décès')
@@ -424,6 +424,122 @@ export const generateActeDeces = async (
   addFooter(doc, deces.numero_acte, deces.annee, agentNom, qrCodeDataUrl)
   
   return doc.output('blob')
+}
+
+// ========================================
+// GÉNÉRATION EXTRAIT POUR DEMANDES
+// ========================================
+export const generateExtraitPDF = async (data: any): Promise<Buffer> => {
+  const doc = new jsPDF()
+  
+  // QR Code de vérification (contient le numéro d'acte)
+  const qrCodeDataUrl = await generateVerificationQRCode(data.numero_acte)
+  
+  // En-tête
+  const mairie: Mairie = {
+    nom_mairie: data.mairie || 'Mairie',
+    ville: data.ville || '',
+    pays: 'Côte d\'Ivoire',
+    code_mairie: 'CI'
+  }
+  
+  const titre = data.type === 'naissance' ? 'Extrait d\'Acte de Naissance' :
+                data.type === 'mariage' ? 'Extrait d\'Acte de Mariage' :
+                'Extrait d\'Acte de Décès'
+  
+  addHeader(doc, mairie, titre)
+  
+  // Numéro d'acte
+  doc.setFontSize(11)
+  doc.setFont('helvetica', 'bold')
+  doc.text(`N° ${data.numero_acte}`, 105, 70, { align: 'center' })
+  
+  // Contenu selon le type
+  doc.setFontSize(11)
+  doc.setFont('helvetica', 'normal')
+  let y = 85
+  
+  if (data.type === 'naissance') {
+    doc.text('Le présent extrait certifie que :', 20, y)
+    y += 10
+    doc.setFont('helvetica', 'bold')
+    doc.text(`${data.prenom} ${data.nom}`, 20, y)
+    doc.setFont('helvetica', 'normal')
+    y += 10
+    doc.text(`Est né(e) le ${formatDate(data.date_naissance)}`, 20, y)
+    y += 8
+    doc.text(`À ${data.lieu_naissance}`, 20, y)
+    y += 12
+    if (data.nom_pere) {
+      doc.text(`Père : ${data.nom_pere}`, 20, y)
+      y += 8
+    }
+    if (data.nom_mere) {
+      doc.text(`Mère : ${data.nom_mere}`, 20, y)
+      y += 8
+    }
+  } else if (data.type === 'mariage') {
+    doc.text('Le présent extrait certifie le mariage entre :', 20, y)
+    y += 10
+    doc.setFont('helvetica', 'bold')
+    doc.text(`${data.prenom} ${data.nom}`, 20, y)
+    doc.setFont('helvetica', 'normal')
+    y += 8
+    doc.text('et', 20, y)
+    y += 8
+    doc.setFont('helvetica', 'bold')
+    doc.text(`${data.prenom_conjoint} ${data.nom_conjoint}`, 20, y)
+    doc.setFont('helvetica', 'normal')
+    y += 10
+    doc.text(`Célébré le ${formatDate(data.date_mariage)}`, 20, y)
+    y += 8
+    doc.text(`À ${data.lieu_mariage}`, 20, y)
+  } else if (data.type === 'deces') {
+    doc.text('Le présent extrait certifie le décès de :', 20, y)
+    y += 10
+    doc.setFont('helvetica', 'bold')
+    doc.text(`${data.prenom} ${data.nom}`, 20, y)
+    doc.setFont('helvetica', 'normal')
+    y += 10
+    doc.text(`Décédé(e) le ${formatDate(data.date_deces)}`, 20, y)
+    y += 8
+    doc.text(`À ${data.lieu_deces}`, 20, y)
+  }
+  
+  // Mention légale
+  y += 15
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'italic')
+  doc.text('Le présent extrait est délivré pour servir et valoir ce que de droit.', 20, y)
+  
+  // Pied de page avec QR Code
+  const pageHeight = doc.internal.pageSize.height
+  doc.setLineWidth(0.3)
+  doc.line(20, pageHeight - 60, 190, pageHeight - 60)
+  
+  // QR Code
+  if (qrCodeDataUrl) {
+    doc.addImage(qrCodeDataUrl, 'PNG', 25, pageHeight - 55, 30, 30)
+    doc.setFontSize(7)
+    doc.text('Scanner pour', 40, pageHeight - 20, { align: 'center' })
+    doc.text('vérifier', 40, pageHeight - 16, { align: 'center' })
+  }
+  
+  // Signature
+  doc.setFontSize(9)
+  doc.text(`Fait à ${data.ville || ''}`, 120, pageHeight - 45)
+  doc.text(`Le ${new Date().toLocaleDateString('fr-FR')}`, 120, pageHeight - 40)
+  doc.setFont('helvetica', 'bold')
+  doc.text('L\'Agent d\'État Civil', 120, pageHeight - 30)
+  
+  // Numéro d'acte en bas
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  doc.text(`N° ${data.numero_acte}`, 105, pageHeight - 10, { align: 'center' })
+  
+  // Retourner le buffer
+  const pdfOutput = doc.output('arraybuffer')
+  return Buffer.from(pdfOutput)
 }
 
 // ========================================

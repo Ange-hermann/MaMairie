@@ -70,17 +70,36 @@ export default function DemandesAgentPage() {
 
   const handleUpdateStatut = async (demandeId: string, newStatut: string) => {
     try {
-      const { error } = await supabase
-        .from('requests')
-        .update({ statut: newStatut })
-        .eq('id', demandeId)
+      // Si on approuve, générer le PDF avec QR Code
+      if (newStatut === 'approuvee') {
+        const response = await fetch('/api/generer-extrait', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ demandeId })
+        })
 
-      if (error) throw error
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Erreur génération PDF')
+        }
+
+        const { pdfUrl } = await response.json()
+        alert(`✅ Demande approuvée ! PDF généré avec QR Code.\nURL: ${pdfUrl}`)
+      } else {
+        // Pour les autres statuts, mise à jour simple
+        const { error } = await supabase
+          .from('requests')
+          .update({ statut: newStatut })
+          .eq('id', demandeId)
+
+        if (error) throw error
+        alert(`✅ Statut mis à jour: ${getStatutLabel(newStatut)}`)
+      }
       
-      alert(`✅ Statut mis à jour: ${getStatutLabel(newStatut)}`)
       fetchData()
       setShowModal(false)
     } catch (error: any) {
+      console.error('Erreur:', error)
       alert('❌ Erreur : ' + error.message)
     }
   }
