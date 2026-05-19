@@ -4,6 +4,7 @@ import './globals.css'
 import { Toaster } from 'sonner'
 import { RegisterServiceWorker } from './register-sw'
 import { PWAInstallPrompt } from '@/components/ui/PWAInstallPrompt'
+import { AuthProvider } from '@/components/AuthProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -49,10 +50,12 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/logo-mamairie.png" />
       </head>
       <body className={inter.className}>
-        <RegisterServiceWorker />
-        {children}
-        <PWAInstallPrompt />
-        <Toaster position="top-right" richColors />
+        <AuthProvider>
+          <RegisterServiceWorker />
+          {children}
+          <PWAInstallPrompt />
+          <Toaster position="top-right" richColors />
+        </AuthProvider>
       </body>
     </html>
   )
