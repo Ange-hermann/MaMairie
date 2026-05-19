@@ -77,7 +77,7 @@ export function NotificationSystem({ userId }: { userId: string }) {
     // Afficher notification navigateur (même si l'app est fermée)
     if (permission === 'granted' && 'serviceWorker' in navigator) {
       navigator.serviceWorker.ready.then((registration) => {
-        registration.showNotification('MaMairie - ' + notification.titre, {
+        const options = {
           body: notification.message,
           icon: '/logo-mamairie.png',
           badge: '/logo-mamairie.png',
@@ -97,7 +97,9 @@ export function NotificationSystem({ userId }: { userId: string }) {
               title: 'Fermer'
             }
           ]
-        })
+        } as NotificationOptions & { vibrate?: number[] }
+
+        registration.showNotification('MaMairie - ' + notification.titre, options)
       })
     }
   }
