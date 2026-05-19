@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Logo } from '@/components/layout/Logo'
 import { Button } from '@/components/ui/Button'
+import { VideoPlayer } from '@/components/VideoPlayer'
 import { FileText, Shield, Zap, Globe } from 'lucide-react'
 
 export default function Home() {
@@ -51,16 +52,7 @@ export default function Home() {
           <h2 className="text-xl md:text-3xl font-bold text-center text-gray-900 mb-4 md:mb-8">
             Découvrez MaMairie en vidéo
           </h2>
-          <div className="relative bg-gray-900 rounded-lg md:rounded-2xl overflow-hidden shadow-2xl aspect-video">
-            <video
-              className="w-full h-full object-cover"
-              controls
-              preload="metadata"
-            >
-              <source src="/video.mp4" type="video/mp4" />
-              Votre navigateur ne supporte pas la lecture de vidéos.
-            </video>
-          </div>
+          <VideoPlayer />
           <p className="text-center text-xs md:text-sm text-gray-500 mt-3 md:mt-4">
             Voyez comment MaMairie transforme les démarches administratives
           </p>
