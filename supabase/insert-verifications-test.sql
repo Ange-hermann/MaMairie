@@ -20,33 +20,27 @@ BEGIN
     SELECT id INTO v_user_id FROM users LIMIT 1;
   END IF;
 
-  -- Insérer des vérifications de test
+  -- Insérer des vérifications de test (colonnes minimales)
   INSERT INTO verifications_actes (
     numero_acte,
     type_acte,
     mairie_id,
     statut_verification,
     nombre_verifications,
-    derniere_verification,
-    verifie_par,
-    details_acte
+    derniere_verification
   ) VALUES
   -- Actes valides
-  ('1234567890', 'naissance', v_mairie_id, 'valide', 3, NOW() - INTERVAL '2 days', v_user_id, '{"nom": "Tagro", "prenom": "Lynda"}'::jsonb),
-  ('1234567', 'naissance', v_mairie_id, 'valide', 2, NOW() - INTERVAL '1 day', v_user_id, '{"nom": "BOUA", "prenom": "Hermann"}'::jsonb),
-  ('2353783', 'naissance', v_mairie_id, 'valide', 1, NOW(), v_user_id, '{"nom": "Boua", "prenom": "Ange"}'::jsonb),
+  ('1234567890', 'naissance', v_mairie_id, 'valide', 3, NOW() - INTERVAL '2 days'),
+  ('1234567', 'naissance', v_mairie_id, 'valide', 2, NOW() - INTERVAL '1 day'),
+  ('2353783', 'naissance', v_mairie_id, 'valide', 1, NOW()),
   
   -- Actes suspects
-  ('2323245', 'naissance', v_mairie_id, 'suspect', 2, NOW() - INTERVAL '3 hours', v_user_id, '{"nom": "boua", "prenom": "EFZGG"}'::jsonb),
-  ('9999999', 'naissance', v_mairie_id, 'suspect', 1, NOW() - INTERVAL '5 hours', v_user_id, '{"anomalie": "Date future"}'::jsonb),
+  ('2323245', 'naissance', v_mairie_id, 'suspect', 2, NOW() - INTERVAL '3 hours'),
+  ('9999999', 'naissance', v_mairie_id, 'suspect', 1, NOW() - INTERVAL '5 hours'),
   
   -- Actes invalides
-  ('0000000', 'naissance', v_mairie_id, 'invalide', 1, NOW() - INTERVAL '1 day', v_user_id, '{"raison": "Acte introuvable"}'::jsonb),
-  ('1111111', 'naissance', v_mairie_id, 'invalide', 2, NOW() - INTERVAL '2 days', v_user_id, '{"raison": "Faux document"}'::jsonb)
-  
-  ON CONFLICT (numero_acte, type_acte) DO UPDATE SET
-    nombre_verifications = verifications_actes.nombre_verifications + 1,
-    derniere_verification = NOW();
+  ('0000000', 'naissance', v_mairie_id, 'invalide', 1, NOW() - INTERVAL '1 day'),
+  ('1111111', 'naissance', v_mairie_id, 'invalide', 2, NOW() - INTERVAL '2 days');
 
   RAISE NOTICE 'Vérifications de test insérées avec succès !';
 END $$;

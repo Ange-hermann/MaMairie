@@ -107,21 +107,44 @@ export default function VerificationActesPage() {
 
   const fetchHistorique = async () => {
     try {
-      const { data: historiqueData } = await supabase
+      const { data: historiqueData, error } = await supabase
         .from('verifications_actes')
-        .select(`
-          *,
-          mairies (
-            nom,
-            ville
-          )
-        `)
+        .select('*')
         .order('derniere_verification', { ascending: false })
         .limit(10)
 
-      setHistorique(historiqueData || [])
+      if (error) {
+        console.error('Erreur historique:', error)
+        setHistorique([])
+        return
+      }
+
+      // Récupérer les infos des mairies séparément
+      if (historiqueData && historiqueData.length > 0) {
+        const mairieIds = [...new Set(historiqueData.map(h => h.mairie_id).filter(Boolean))]
+        
+        if (mairieIds.length > 0) {
+          const { data: mairiesData } = await supabase
+            .from('mairies')
+            .select('id, nom_mairie, ville')
+            .in('id', mairieIds)
+
+          // Ajouter les infos de mairie à chaque vérification
+          const historiqueAvecMairies = historiqueData.map(verif => ({
+            ...verif,
+            mairies: mairiesData?.find(m => m.id === verif.mairie_id) || null
+          }))
+
+          setHistorique(historiqueAvecMairies)
+        } else {
+          setHistorique(historiqueData)
+        }
+      } else {
+        setHistorique([])
+      }
     } catch (error) {
       console.error('Erreur:', error)
+      setHistorique([])
     }
   }
 
@@ -718,7 +741,7 @@ export default function VerificationActesPage() {
                     <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="p-3 font-medium">{item.numero_acte}</td>
                       <td className="p-3 capitalize">{item.type_acte}</td>
-                      <td className="p-3">{item.mairies?.nom || 'N/A'}</td>
+                      <td className="p-3">{item.mairies?.nom_mairie || 'N/A'}</td>
                       <td className="p-3 text-center">{item.nombre_verifications}</td>
                       <td className="p-3 text-center text-sm text-gray-600">
                         {new Date(item.derniere_verification).toLocaleDateString('fr-FR')}
