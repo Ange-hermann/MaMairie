@@ -334,40 +334,44 @@ export default function VerificationActesPage() {
 
   const enregistrerVerification = async (acte: any, statut: string, anomalies?: string[]) => {
     try {
+      console.log('📝 Enregistrement vérification:', { numero: acte.numero_acte, statut, type: typeActe })
+
       // Vérifier si une entrée existe déjà
-      const { data: existing } = await supabase
+      const { data: existing, error: selectError } = await supabase
         .from('verifications_actes')
         .select('id, nombre_verifications')
-        .eq('numero_acte', acte.numero_acte || acte.numero_acte)
+        .eq('numero_acte', acte.numero_acte)
         .eq('type_acte', typeActe)
         .maybeSingle()
 
-      const detailsActe = acte.id ? {
-        id: acte.id,
-        numero_acte: acte.numero_acte,
-        type_acte: typeActe,
-        mairie: acte.mairies?.nom_mairie || null,
-      } : null
+      if (selectError) {
+        console.error('❌ Erreur SELECT:', selectError)
+        return
+      }
 
       if (existing) {
         // Mettre à jour l'entrée existante
+        console.log('🔄 Mise à jour entrée existante:', existing.id)
         const { error } = await supabase
           .from('verifications_actes')
           .update({
             nombre_verifications: existing.nombre_verifications + 1,
             derniere_verification: new Date().toISOString(),
             statut_verification: statut,
-            details_acte: detailsActe,
-            verifie_par: userData?.id,
           })
           .eq('id', existing.id)
 
         if (error) {
-          console.error('Erreur mise à jour:', error)
+          console.error('❌ Erreur UPDATE:', error)
+        } else {
+          console.log('✅ Vérification mise à jour !')
+          await fetchStatistiques()
+          await fetchHistorique()
         }
       } else {
         // Créer nouvelle entrée
-        const { error } = await supabase
+        console.log('➕ Création nouvelle entrée')
+        const { data, error } = await supabase
           .from('verifications_actes')
           .insert([{
             numero_acte: acte.numero_acte,
@@ -376,16 +380,20 @@ export default function VerificationActesPage() {
             statut_verification: statut,
             nombre_verifications: 1,
             derniere_verification: new Date().toISOString(),
-            details_acte: detailsActe,
-            verifie_par: userData?.id,
           }])
+          .select()
 
         if (error) {
-          console.error('Erreur insertion:', error)
+          console.error('❌ Erreur INSERT:', error)
+          console.error('Détails:', JSON.stringify(error, null, 2))
+        } else {
+          console.log('✅ Vérification enregistrée !', data)
+          await fetchStatistiques()
+          await fetchHistorique()
         }
       }
     } catch (error) {
-      console.error('Erreur enregistrement vérification:', error)
+      console.error('❌ Erreur enregistrement vérification:', error)
     }
   }
 
