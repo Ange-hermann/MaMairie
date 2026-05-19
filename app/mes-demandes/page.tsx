@@ -11,6 +11,7 @@ import { formatDate } from '@/lib/utils'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
 import jsPDF from 'jspdf'
+import QRCode from 'qrcode'
 
 export default function MesDemandesPage() {
   const router = useRouter()
@@ -106,34 +107,67 @@ export default function MesDemandesPage() {
     return types[typeActe as keyof typeof types] || typeActe
   }
 
-  const downloadPDF = (request: any) => {
+  const downloadPDF = async (request: any) => {
     try {
       const doc = new jsPDF()
       
+      // Générer le QR Code avec le numéro d'acte
+      let qrCodeDataUrl = ''
+      if (request.numero_acte) {
+        qrCodeDataUrl = await QRCode.toDataURL(request.numero_acte, {
+          width: 120,
+          margin: 1,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+          },
+          errorCorrectionLevel: 'H'
+        })
+      }
+      
+      // Bordure
+      doc.setDrawColor(0, 0, 0)
+      doc.setLineWidth(0.5)
+      doc.rect(10, 10, 190, 277)
+      
       // En-tête
-      doc.setFontSize(20)
+      doc.setFontSize(10)
       doc.setFont('helvetica', 'bold')
       doc.text('RÉPUBLIQUE DE CÔTE D\'IVOIRE', 105, 20, { align: 'center' })
       
-      doc.setFontSize(12)
+      doc.setFontSize(8)
       doc.setFont('helvetica', 'normal')
-      doc.text('Union - Discipline - Travail', 105, 28, { align: 'center' })
+      doc.text('Union - Discipline - Travail', 105, 25, { align: 'center' })
       
       // Ligne de séparation
-      doc.setLineWidth(0.5)
-      doc.line(20, 35, 190, 35)
-      
-      // Titre du document
-      doc.setFontSize(18)
-      doc.setFont('helvetica', 'bold')
-      doc.text(getTypeLabel(request.type_acte).toUpperCase(), 105, 50, { align: 'center' })
+      doc.setLineWidth(0.3)
+      doc.line(20, 28, 190, 28)
       
       // Informations de la mairie
       doc.setFontSize(11)
-      doc.setFont('helvetica', 'normal')
+      doc.setFont('helvetica', 'bold')
       const mairieNom = request.mairies?.nom_mairie || 'Mairie'
       const mairieVille = request.mairies?.ville || ''
-      doc.text(`${mairieNom} - ${mairieVille}`, 105, 60, { align: 'center' })
+      doc.text(mairieNom.toUpperCase(), 105, 35, { align: 'center' })
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`${mairieVille} - Côte d'Ivoire`, 105, 40, { align: 'center' })
+      
+      // Titre du document
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.text(getTypeLabel(request.type_acte).toUpperCase(), 105, 55, { align: 'center' })
+      
+      // Ligne de séparation
+      doc.setLineWidth(0.3)
+      doc.line(20, 60, 190, 60)
+      
+      // Numéro d'acte en haut (comme les actes officiels)
+      if (request.numero_acte) {
+        doc.setFontSize(11)
+        doc.setFont('helvetica', 'bold')
+        doc.text(`N° ${request.numero_acte}`, 105, 70, { align: 'center' })
+      }
       
       // Corps du document
       doc.setFontSize(12)
@@ -185,10 +219,31 @@ export default function MesDemandesPage() {
       yPos += 15
       doc.text('Le Maire', 120, yPos)
       
-      // Pied de page
-      doc.setFontSize(8)
-      doc.setTextColor(128, 128, 128)
-      doc.text('Document officiel délivré par MaMairie - République de Côte d\'Ivoire', 105, 280, { align: 'center' })
+      // Pied de page avec QR Code
+      const pageHeight = doc.internal.pageSize.height
+      doc.setLineWidth(0.3)
+      doc.setTextColor(0, 0, 0)
+      doc.line(20, pageHeight - 60, 190, pageHeight - 60)
+      
+      // QR Code
+      if (qrCodeDataUrl) {
+        doc.addImage(qrCodeDataUrl, 'PNG', 25, pageHeight - 55, 30, 30)
+        doc.setFontSize(7)
+        doc.text('Scanner pour', 40, pageHeight - 20, { align: 'center' })
+        doc.text('vérifier', 40, pageHeight - 16, { align: 'center' })
+      }
+      
+      // Numéro d'acte en bas
+      if (request.numero_acte) {
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8)
+        doc.text(`N° ${request.numero_acte}`, 105, pageHeight - 10, { align: 'center' })
+      }
+      
+      // Mention légale
+      doc.setFontSize(7)
+      doc.setTextColor(100, 100, 100)
+      doc.text('Document officiel délivré par MaMairie - République de Côte d\'Ivoire', 105, pageHeight - 5, { align: 'center' })
       
       // Télécharger le PDF
       const fileName = `${getTypeLabel(request.type_acte).replace(/ /g, '_')}_${request.nom}_${request.prenom}.pdf`
