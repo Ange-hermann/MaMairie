@@ -1,9 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { Camera, X, Scan } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Camera, X } from 'lucide-react'
 import { Button } from './ui/Button'
-import { Html5Qrcode } from 'html5-qrcode'
+import dynamic from 'next/dynamic'
+
+// Charger QrScanner dynamiquement (côté client uniquement)
+const QrScanner = dynamic(() => import('react-qr-scanner'), { ssr: false })
 
 interface QRScannerProps {
   onScan: (data: string) => void
@@ -15,17 +18,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
   const [scanning, setScanning] = useState(false)
   const [manualInput, setManualInput] = useState('')
   const [scanSuccess, setScanSuccess] = useState(false)
-  const html5QrCodeRef = useRef<Html5Qrcode | null>(null)
-  const scannerDivId = 'qr-reader'
-
-  useEffect(() => {
-    return () => {
-      // Nettoyer le scanner quand le composant est démonté
-      if (html5QrCodeRef.current && scanning) {
-        html5QrCodeRef.current.stop().catch(console.error)
-      }
-    }
-  }, [scanning])
+  const [cameraReady, setCameraReady] = useState(false)
 
   const handleManualSubmit = () => {
     if (manualInput.trim()) {
@@ -33,96 +26,39 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
     }
   }
 
-  const startScan = async () => {
-    try {
-      console.log('🎥 Démarrage du scanner...')
-      setScanning(true)
-      setError('')
-      
-      // Créer une instance Html5Qrcode
-      const html5QrCode = new Html5Qrcode(scannerDivId)
-      html5QrCodeRef.current = html5QrCode
-
-      // Configuration du scanner
-      const config = {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0,
-        disableFlip: false,
-      }
-
-      console.log('📸 Demande accès caméra...')
-
-      // Essayer d'abord la caméra arrière
-      try {
-        await html5QrCode.start(
-          { facingMode: 'environment' }, // Caméra arrière
-          config,
-          (decodedText) => {
-            // QR Code détecté avec succès !
-            console.log('✅ QR Code détecté:', decodedText)
-            setScanSuccess(true)
-            stopScan()
-            onScan(decodedText)
-          },
-          (errorMessage) => {
-            // Erreur de scan (normal, ça scan en continu)
-            // On ne fait rien ici
-          }
-        )
-        console.log('✅ Scanner démarré avec succès !')
-      } catch (backCameraError) {
-        console.warn('⚠️ Caméra arrière non disponible, essai caméra avant...')
-        // Si la caméra arrière échoue, essayer la caméra avant
-        await html5QrCode.start(
-          { facingMode: 'user' }, // Caméra avant
-          config,
-          (decodedText) => {
-            console.log('✅ QR Code détecté:', decodedText)
-            setScanSuccess(true)
-            stopScan()
-            onScan(decodedText)
-          },
-          (errorMessage) => {
-            // Erreur de scan (normal)
-          }
-        )
-        console.log('✅ Scanner démarré avec caméra avant !')
-      }
-
-    } catch (err: any) {
-      console.error('❌ Erreur caméra:', err)
-      console.error('Détails:', err.message, err.name)
-      
-      let errorMsg = 'Impossible d\'accéder à la caméra. '
-      
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        errorMsg += 'Veuillez autoriser l\'accès à la caméra dans les paramètres de votre navigateur.'
-      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        errorMsg += 'Aucune caméra détectée sur cet appareil.'
-      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-        errorMsg += 'La caméra est peut-être utilisée par une autre application.'
-      } else {
-        errorMsg += 'Utilisez la saisie manuelle ci-dessous.'
-      }
-      
-      setError(errorMsg)
+  const handleScan = (data: any) => {
+    if (data && data.text) {
+      console.log('✅ QR Code détecté:', data.text)
+      setScanSuccess(true)
       setScanning(false)
+      onScan(data.text)
     }
   }
 
-  const stopScan = () => {
-    if (html5QrCodeRef.current && scanning) {
-      html5QrCodeRef.current.stop()
-        .then(() => {
-          console.log('Scanner arrêté')
-          html5QrCodeRef.current = null
-        })
-        .catch((err) => {
-          console.error('Erreur arrêt scanner:', err)
-        })
+  const handleError = (err: any) => {
+    console.error('❌ Erreur scan:', err)
+    if (!cameraReady) {
+      setError('Impossible d\'accéder à la caméra. Veuillez autoriser l\'accès ou utiliser la saisie manuelle.')
     }
+  }
+
+  const handleLoad = () => {
+    console.log('✅ Caméra prête !')
+    setCameraReady(true)
+    setError('')
+  }
+
+  const startScan = () => {
+    console.log('🎥 Démarrage du scanner...')
+    setScanning(true)
+    setError('')
+    setCameraReady(false)
+  }
+
+  const stopScan = () => {
+    console.log('🛑 Arrêt du scanner')
     setScanning(false)
+    setCameraReady(false)
   }
 
   return (
@@ -150,13 +86,30 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
           <div className="relative">
             {scanning ? (
               <div className="relative">
-                {/* Div pour html5-qrcode */}
-                <div id={scannerDivId} className="rounded-lg overflow-hidden"></div>
+                {/* Scanner QR avec react-qr-scanner */}
+                <div className="rounded-lg overflow-hidden bg-black">
+                  <QrScanner
+                    delay={300}
+                    onError={handleError}
+                    onScan={handleScan}
+                    onLoad={handleLoad}
+                    style={{ width: '100%' }}
+                    constraints={{
+                      video: { facingMode: 'environment' }
+                    }}
+                  />
+                </div>
+                
+                {!cameraReady && !error && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                    <p className="text-white text-sm">Chargement de la caméra...</p>
+                  </div>
+                )}
                 
                 <Button
                   onClick={stopScan}
                   variant="outline"
-                  className="mt-4 w-full"
+                  className="mt-4 w-full bg-white"
                 >
                   Arrêter le Scan
                 </Button>
