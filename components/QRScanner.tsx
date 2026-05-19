@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Camera, X, Scan } from 'lucide-react'
 import { Button } from './ui/Button'
+import { Html5Qrcode } from 'html5-qrcode'
 
 interface QRScannerProps {
   onScan: (data: string) => void
@@ -14,22 +15,17 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
   const [scanning, setScanning] = useState(false)
   const [manualInput, setManualInput] = useState('')
   const [scanSuccess, setScanSuccess] = useState(false)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const scanIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null)
+  const scannerDivId = 'qr-reader'
 
   useEffect(() => {
     return () => {
-      // Nettoyer le stream et l'interval quand le composant est démonté
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop())
-      }
-      if (scanIntervalRef.current) {
-        clearTimeout(scanIntervalRef.current)
+      // Nettoyer le scanner quand le composant est démonté
+      if (html5QrCodeRef.current && scanning) {
+        html5QrCodeRef.current.stop().catch(console.error)
       }
     }
-  }, [])
+  }, [scanning])
 
   const handleManualSubmit = () => {
     if (manualInput.trim()) {
@@ -42,81 +38,53 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
       setScanning(true)
       setError('')
       
-      // Demander l'accès à la caméra
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
-      })
-      
-      streamRef.current = stream
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        videoRef.current.play()
-        
-        // Démarrer la détection QR
-        detectQRCode()
+      // Créer une instance Html5Qrcode
+      const html5QrCode = new Html5Qrcode(scannerDivId)
+      html5QrCodeRef.current = html5QrCode
+
+      // Configuration du scanner
+      const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0
       }
+
+      // Démarrer le scan
+      await html5QrCode.start(
+        { facingMode: 'environment' }, // Caméra arrière
+        config,
+        (decodedText) => {
+          // QR Code détecté avec succès !
+          console.log('QR Code détecté:', decodedText)
+          setScanSuccess(true)
+          stopScan()
+          onScan(decodedText)
+        },
+        (errorMessage) => {
+          // Erreur de scan (normal, ça scan en continu)
+          // On ne fait rien ici
+        }
+      )
 
     } catch (err: any) {
       console.error('Erreur caméra:', err)
-      setError('Impossible d\'accéder à la caméra. Veuillez autoriser l\'accès.')
+      setError('Impossible d\'accéder à la caméra. Veuillez autoriser l\'accès ou utiliser la saisie manuelle.')
       setScanning(false)
     }
   }
 
   const stopScan = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop())
-      streamRef.current = null
-    }
-    if (scanIntervalRef.current) {
-      clearTimeout(scanIntervalRef.current)
-      scanIntervalRef.current = null
+    if (html5QrCodeRef.current && scanning) {
+      html5QrCodeRef.current.stop()
+        .then(() => {
+          console.log('Scanner arrêté')
+          html5QrCodeRef.current = null
+        })
+        .catch((err) => {
+          console.error('Erreur arrêt scanner:', err)
+        })
     }
     setScanning(false)
-  }
-
-  const detectQRCode = async () => {
-    if (!videoRef.current || !canvasRef.current || !scanning) return
-
-    const video = videoRef.current
-    const canvas = canvasRef.current
-    const context = canvas.getContext('2d')
-
-    if (video.readyState === video.HAVE_ENOUGH_DATA && context) {
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
-      context.drawImage(video, 0, 0, canvas.width, canvas.height)
-      
-      const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-      
-      try {
-        // Utiliser jsQR pour détecter le QR Code
-        const jsQR = (await import('jsqr')).default
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'dontInvert',
-        })
-
-        if (code && code.data) {
-          // QR Code détecté !
-          setScanSuccess(true)
-          stopScan()
-          onScan(code.data)
-          return
-        }
-      } catch (err) {
-        console.error('Erreur détection QR:', err)
-      }
-      
-      // Continuer à scanner
-      scanIntervalRef.current = setTimeout(() => detectQRCode(), 100)
-    } else {
-      scanIntervalRef.current = setTimeout(() => detectQRCode(), 100)
-    }
   }
 
   return (
@@ -143,26 +111,16 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
           {/* Zone de scan */}
           <div className="relative">
             {scanning ? (
-              <div className="relative bg-black rounded-lg overflow-hidden">
-                <video
-                  ref={videoRef}
-                  className="w-full h-64 object-cover"
-                  playsInline
-                  muted
-                />
-                <canvas ref={canvasRef} className="hidden" />
-                
-                {/* Overlay de scan */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-48 h-48 border-4 border-primary-500 rounded-lg animate-pulse"></div>
-                </div>
+              <div className="relative">
+                {/* Div pour html5-qrcode */}
+                <div id={scannerDivId} className="rounded-lg overflow-hidden"></div>
                 
                 <Button
                   onClick={stopScan}
                   variant="outline"
-                  className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white"
+                  className="mt-4 w-full"
                 >
-                  Arrêter
+                  Arrêter le Scan
                 </Button>
               </div>
             ) : (

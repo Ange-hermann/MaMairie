@@ -77,15 +77,33 @@ SELECT nom_mairie, ville FROM mairies LIMIT 5;
 
 ## 📊 **STATISTIQUES ET CARTES**
 
-### **Problème : Les cartes affichent 0**
+### **Les cartes affichent 0 - C'est normal !**
 
-**Cause :** La table `verifications_actes` est vide
+**Pourquoi ?** La table `verifications_actes` est vide au départ.
 
-**Solution :** Vérifiez quelques actes pour remplir l'historique :
-1. Allez sur `/ministere/verification`
-2. Vérifiez 3-4 actes différents
-3. Rafraîchissez la page
-4. Les stats devraient s'afficher
+**Solution : Utilisez l'interface pour vérifier de vrais actes**
+
+1. **Allez sur** `/ministere/verification`
+2. **Vérifiez quelques actes** en entrant ces numéros :
+   - `1234567890` (Lynda Tagro)
+   - `1234567` (Hermann BOUA)
+   - `2353783` (Ange Boua)
+   - `2323245` (EFZGG boua)
+
+3. **Chaque vérification va automatiquement** :
+   - ✅ Créer une entrée dans la base
+   - ✅ Mettre à jour les stats (Total, Valides, Suspects, Invalides)
+   - ✅ Ajouter une ligne dans l'historique
+
+4. **Rafraîchissez la page** → Les stats s'affichent ! 🎉
+
+### **Nettoyer les données de test (si besoin)**
+
+Si vous avez des données de test à supprimer :
+```sql
+-- Exécutez le contenu de nettoyer-donnees-test.sql
+DELETE FROM verifications_actes;
+```
 
 ---
 
