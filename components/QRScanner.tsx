@@ -35,6 +35,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
 
   const startScan = async () => {
     try {
+      console.log('🎥 Démarrage du scanner...')
       setScanning(true)
       setError('')
       
@@ -46,29 +47,66 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
       const config = {
         fps: 10,
         qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0
+        aspectRatio: 1.0,
+        disableFlip: false,
       }
 
-      // Démarrer le scan
-      await html5QrCode.start(
-        { facingMode: 'environment' }, // Caméra arrière
-        config,
-        (decodedText) => {
-          // QR Code détecté avec succès !
-          console.log('QR Code détecté:', decodedText)
-          setScanSuccess(true)
-          stopScan()
-          onScan(decodedText)
-        },
-        (errorMessage) => {
-          // Erreur de scan (normal, ça scan en continu)
-          // On ne fait rien ici
-        }
-      )
+      console.log('📸 Demande accès caméra...')
+
+      // Essayer d'abord la caméra arrière
+      try {
+        await html5QrCode.start(
+          { facingMode: 'environment' }, // Caméra arrière
+          config,
+          (decodedText) => {
+            // QR Code détecté avec succès !
+            console.log('✅ QR Code détecté:', decodedText)
+            setScanSuccess(true)
+            stopScan()
+            onScan(decodedText)
+          },
+          (errorMessage) => {
+            // Erreur de scan (normal, ça scan en continu)
+            // On ne fait rien ici
+          }
+        )
+        console.log('✅ Scanner démarré avec succès !')
+      } catch (backCameraError) {
+        console.warn('⚠️ Caméra arrière non disponible, essai caméra avant...')
+        // Si la caméra arrière échoue, essayer la caméra avant
+        await html5QrCode.start(
+          { facingMode: 'user' }, // Caméra avant
+          config,
+          (decodedText) => {
+            console.log('✅ QR Code détecté:', decodedText)
+            setScanSuccess(true)
+            stopScan()
+            onScan(decodedText)
+          },
+          (errorMessage) => {
+            // Erreur de scan (normal)
+          }
+        )
+        console.log('✅ Scanner démarré avec caméra avant !')
+      }
 
     } catch (err: any) {
-      console.error('Erreur caméra:', err)
-      setError('Impossible d\'accéder à la caméra. Veuillez autoriser l\'accès ou utiliser la saisie manuelle.')
+      console.error('❌ Erreur caméra:', err)
+      console.error('Détails:', err.message, err.name)
+      
+      let errorMsg = 'Impossible d\'accéder à la caméra. '
+      
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        errorMsg += 'Veuillez autoriser l\'accès à la caméra dans les paramètres de votre navigateur.'
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        errorMsg += 'Aucune caméra détectée sur cet appareil.'
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        errorMsg += 'La caméra est peut-être utilisée par une autre application.'
+      } else {
+        errorMsg += 'Utilisez la saisie manuelle ci-dessous.'
+      }
+      
+      setError(errorMsg)
       setScanning(false)
     }
   }
