@@ -71,21 +71,43 @@ const formatTime = (timeString?: string): string => {
   return timeString.substring(0, 5) // HH:MM
 }
 
-// Génération du QR Code
-const generateQRCode = async (id: string): Promise<string> => {
+// Génération du QR Code de vérification (contient le numéro d'acte)
+const generateVerificationQRCode = async (numeroActe: string): Promise<string> => {
   try {
-    const verificationUrl = `${window.location.origin}/verify/${id}`
-    const qrCodeDataUrl = await QRCode.toDataURL(verificationUrl, {
-      width: 150,
+    // QR Code pour vérifier l'authenticité (contient juste le numéro)
+    const qrCodeDataUrl = await QRCode.toDataURL(numeroActe, {
+      width: 120,
       margin: 1,
       color: {
         dark: '#000000',
         light: '#FFFFFF'
-      }
+      },
+      errorCorrectionLevel: 'H'
     })
     return qrCodeDataUrl
   } catch (error) {
-    console.error('Erreur génération QR Code:', error)
+    console.error('Erreur génération QR Code vérification:', error)
+    return ''
+  }
+}
+
+// Génération du QR Code de téléchargement (URL vers le PDF)
+const generateDownloadQRCode = async (acteId: string, typeActe: string): Promise<string> => {
+  try {
+    // URL pour télécharger directement le PDF
+    const downloadUrl = `${window.location.origin}/api/download-acte?id=${acteId}&type=${typeActe}`
+    const qrCodeDataUrl = await QRCode.toDataURL(downloadUrl, {
+      width: 120,
+      margin: 1,
+      color: {
+        dark: '#1e40af', // Bleu pour différencier
+        light: '#FFFFFF'
+      },
+      errorCorrectionLevel: 'H'
+    })
+    return qrCodeDataUrl
+  } catch (error) {
+    console.error('Erreur génération QR Code téléchargement:', error)
     return ''
   }
 }
@@ -182,8 +204,8 @@ export const generateActeNaissance = async (
 ): Promise<Blob> => {
   const doc = new jsPDF()
   
-  // QR Code
-  const qrCodeDataUrl = await generateQRCode(naissance.id)
+  // QR Code de téléchargement (pour accéder au PDF de l'extrait)
+  const qrCodeDataUrl = await generateDownloadQRCode(naissance.id, 'naissance')
   
   // En-tête
   addHeader(doc, mairie, 'Extrait d\'Acte de Naissance')
@@ -258,8 +280,8 @@ export const generateActeMariage = async (
 ): Promise<Blob> => {
   const doc = new jsPDF()
   
-  // QR Code
-  const qrCodeDataUrl = await generateQRCode(mariage.id)
+  // QR Code de téléchargement (pour accéder au PDF de l'extrait)
+  const qrCodeDataUrl = await generateDownloadQRCode(mariage.id, 'mariage')
   
   // En-tête
   addHeader(doc, mairie, 'Extrait d\'Acte de Mariage')
@@ -342,8 +364,8 @@ export const generateActeDeces = async (
 ): Promise<Blob> => {
   const doc = new jsPDF()
   
-  // QR Code
-  const qrCodeDataUrl = await generateQRCode(deces.id)
+  // QR Code de téléchargement (pour accéder au PDF de l'extrait)
+  const qrCodeDataUrl = await generateDownloadQRCode(deces.id, 'deces')
   
   // En-tête
   addHeader(doc, mairie, 'Extrait d\'Acte de Décès')

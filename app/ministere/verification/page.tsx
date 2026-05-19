@@ -334,7 +334,6 @@ export default function VerificationActesPage() {
             nombre_verifications: existing.nombre_verifications + 1,
             derniere_verification: new Date().toISOString(),
             statut_verification: statut,
-            anomalies: anomalies || [],
             details_acte: detailsActe,
             verifie_par: userData?.id,
           })
@@ -354,7 +353,6 @@ export default function VerificationActesPage() {
             statut_verification: statut,
             nombre_verifications: 1,
             derniere_verification: new Date().toISOString(),
-            anomalies: anomalies || [],
             details_acte: detailsActe,
             verifie_par: userData?.id,
           }])
