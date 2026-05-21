@@ -25,6 +25,8 @@ export default function DemandesAgentPage() {
   const [showRejetModal, setShowRejetModal] = useState(false)
   const [motifRejet, setMotifRejet] = useState('')
   const [motifAutre, setMotifAutre] = useState('')
+  const [verificationResult, setVerificationResult] = useState<any>(null)
+  const [verificationLoading, setVerificationLoading] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -173,6 +175,81 @@ export default function DemandesAgentPage() {
     } catch (error: any) {
       alert('❌ Erreur : ' + error.message)
     }
+  }
+
+  const verifierNumeroActe = async (demande: any) => {
+    if (!demande.numero_acte) {
+      setVerificationResult({
+        valide: false,
+        message: 'Aucun numéro d\'acte fourni',
+        details: null
+      })
+      return
+    }
+
+    setVerificationLoading(true)
+    try {
+      // Déterminer la table selon le type d'acte
+      const tableName = demande.type_acte === 'naissance' ? 'naissances' :
+                        demande.type_acte === 'mariage' ? 'mariages' : 'deces'
+
+      // Chercher l'acte dans la base de données
+      const { data: acte, error } = await supabase
+        .from(tableName)
+        .select('*, mairies(nom_mairie, ville)')
+        .eq('numero_acte', demande.numero_acte)
+        .single()
+
+      if (error || !acte) {
+        setVerificationResult({
+          valide: false,
+          message: '❌ Numéro d\'acte INVALIDE - Acte introuvable dans la base de données',
+          details: null
+        })
+      } else {
+        // Vérifier la cohérence des données
+        const coherent = verifierCoherence(demande, acte)
+        
+        setVerificationResult({
+          valide: true,
+          coherent: coherent,
+          message: coherent 
+            ? '✅ Numéro d\'acte VALIDE - Les informations correspondent'
+            : '⚠️ Numéro d\'acte VALIDE mais incohérences détectées',
+          details: acte
+        })
+      }
+    } catch (error) {
+      console.error('Erreur vérification:', error)
+      setVerificationResult({
+        valide: false,
+        message: '❌ Erreur lors de la vérification',
+        details: null
+      })
+    } finally {
+      setVerificationLoading(false)
+    }
+  }
+
+  const verifierCoherence = (demande: any, acte: any) => {
+    // Vérifier la cohérence selon le type d'acte
+    if (demande.type_acte === 'naissance') {
+      return (
+        demande.nom?.toLowerCase() === acte.nom_enfant?.toLowerCase() &&
+        demande.prenom?.toLowerCase() === acte.prenom_enfant?.toLowerCase()
+      )
+    } else if (demande.type_acte === 'mariage') {
+      return (
+        demande.nom?.toLowerCase() === acte.nom_epoux?.toLowerCase() ||
+        demande.nom?.toLowerCase() === acte.nom_epouse?.toLowerCase()
+      )
+    } else if (demande.type_acte === 'deces') {
+      return (
+        demande.nom?.toLowerCase() === acte.nom_defunt?.toLowerCase() &&
+        demande.prenom?.toLowerCase() === acte.prenom_defunt?.toLowerCase()
+      )
+    }
+    return true
   }
 
   const getStatutBadge = (statut: string) => {
@@ -365,45 +442,19 @@ export default function DemandesAgentPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-sm">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => {
-                                setSelectedDemande(demande)
-                                setShowModal(true)
-                              }}
-                              className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                              title="Voir détails"
-                            >
-                              <Eye size={18} />
-                            </button>
-                            {demande.statut === 'en_attente' && (
-                              <button
-                                onClick={() => handleUpdateStatut(demande.id, 'en_traitement')}
-                                className="p-1 text-cyan-600 hover:bg-cyan-50 rounded"
-                                title="Mettre en traitement"
-                              >
-                                <Clock size={18} />
-                              </button>
-                            )}
-                            {(demande.statut === 'en_attente' || demande.statut === 'en_traitement') && (
-                              <>
-                                <button
-                                  onClick={() => handleUpdateStatut(demande.id, 'validee')}
-                                  className="p-1 text-green-600 hover:bg-green-50 rounded"
-                                  title="Valider"
-                                >
-                                  <CheckCircle size={18} />
-                                </button>
-                                <button
-                                  onClick={() => handleUpdateStatut(demande.id, 'rejetee')}
-                                  className="p-1 text-red-600 hover:bg-red-50 rounded"
-                                  title="Rejeter"
-                                >
-                                  <XCircle size={18} />
-                                </button>
-                              </>
-                            )}
-                          </div>
+                          <button
+                            onClick={() => {
+                              setSelectedDemande(demande)
+                              setShowModal(true)
+                              setVerificationResult(null) // Reset
+                              verifierNumeroActe(demande) // Vérification automatique
+                            }}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg border border-blue-200 hover:border-blue-300 transition-colors"
+                            title="Voir détails et traiter"
+                          >
+                            <Eye size={16} />
+                            <span className="text-sm font-medium">Voir détails</span>
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -450,13 +501,156 @@ export default function DemandesAgentPage() {
                 <h3 className="font-semibold text-gray-700 mb-2">Informations de la Demande</h3>
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                   <p><span className="font-medium">Type:</span> {selectedDemande.type_acte}</p>
+                  <p><span className="font-medium">Numéro d'acte:</span> {selectedDemande.numero_acte || 'Non fourni'}</p>
                   <p><span className="font-medium">Nom:</span> {selectedDemande.nom}</p>
                   <p><span className="font-medium">Prénom:</span> {selectedDemande.prenom}</p>
-                  <p><span className="font-medium">Date de naissance:</span> {new Date(selectedDemande.date_naissance).toLocaleDateString('fr-FR')}</p>
-                  <p><span className="font-medium">Lieu de naissance:</span> {selectedDemande.lieu_naissance}</p>
-                  <p><span className="font-medium">Père:</span> {selectedDemande.nom_pere}</p>
-                  <p><span className="font-medium">Mère:</span> {selectedDemande.nom_mere}</p>
+                  {selectedDemande.date_naissance && (
+                    <p><span className="font-medium">Date de naissance:</span> {new Date(selectedDemande.date_naissance).toLocaleDateString('fr-FR')}</p>
+                  )}
+                  {selectedDemande.lieu_naissance && (
+                    <p><span className="font-medium">Lieu de naissance:</span> {selectedDemande.lieu_naissance}</p>
+                  )}
+                  {selectedDemande.nom_pere && (
+                    <p><span className="font-medium">Père:</span> {selectedDemande.nom_pere}</p>
+                  )}
+                  {selectedDemande.nom_mere && (
+                    <p><span className="font-medium">Mère:</span> {selectedDemande.nom_mere}</p>
+                  )}
                 </div>
+              </div>
+
+              {/* Résultat de la vérification automatique */}
+              <div>
+                <h3 className="font-semibold text-gray-700 mb-2">🔍 Vérification Automatique du Numéro d'Acte</h3>
+                {verificationLoading ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-blue-800">🔄 Vérification en cours...</p>
+                  </div>
+                ) : verificationResult ? (
+                  <div className={`border rounded-lg p-4 ${
+                    verificationResult.valide 
+                      ? (verificationResult.coherent ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200')
+                      : 'bg-red-50 border-red-200'
+                  }`}>
+                    <p className={`font-semibold mb-2 ${
+                      verificationResult.valide 
+                        ? (verificationResult.coherent ? 'text-green-800' : 'text-yellow-800')
+                        : 'text-red-800'
+                    }`}>
+                      {verificationResult.message}
+                    </p>
+                    
+                    {verificationResult.details && (
+                      <div className="mt-3 pt-3 border-t border-gray-300">
+                        <p className="text-sm font-semibold text-gray-800 mb-3">📊 Comparaison Détaillée</p>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Colonne 1 : Ce que le citoyen a rempli */}
+                          <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                            <p className="text-xs font-semibold text-blue-900 mb-2">📝 Demande du citoyen</p>
+                            <div className="text-xs text-blue-800 space-y-1">
+                              <p><strong>Nom:</strong> {selectedDemande.nom}</p>
+                              <p><strong>Prénom:</strong> {selectedDemande.prenom}</p>
+                              {selectedDemande.date_naissance && (
+                                <p><strong>Date naissance:</strong> {new Date(selectedDemande.date_naissance).toLocaleDateString('fr-FR')}</p>
+                              )}
+                              {selectedDemande.lieu_naissance && (
+                                <p><strong>Lieu naissance:</strong> {selectedDemande.lieu_naissance}</p>
+                              )}
+                              {selectedDemande.nom_pere && (
+                                <p><strong>Père:</strong> {selectedDemande.nom_pere}</p>
+                              )}
+                              {selectedDemande.nom_mere && (
+                                <p><strong>Mère:</strong> {selectedDemande.nom_mere}</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Colonne 2 : Ce qui est dans la base (acte original) */}
+                          <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                            <p className="text-xs font-semibold text-green-900 mb-2">✅ Acte original (Base de données)</p>
+                            <div className="text-xs text-green-800 space-y-1">
+                              {verificationResult.details.nom_enfant && (
+                                <>
+                                  <p><strong>Nom:</strong> {verificationResult.details.nom_enfant}</p>
+                                  <p><strong>Prénom:</strong> {verificationResult.details.prenom_enfant}</p>
+                                  {verificationResult.details.date_naissance && (
+                                    <p><strong>Date naissance:</strong> {new Date(verificationResult.details.date_naissance).toLocaleDateString('fr-FR')}</p>
+                                  )}
+                                  {verificationResult.details.lieu_naissance && (
+                                    <p><strong>Lieu naissance:</strong> {verificationResult.details.lieu_naissance}</p>
+                                  )}
+                                  {verificationResult.details.nom_pere && (
+                                    <p><strong>Père:</strong> {verificationResult.details.prenom_pere} {verificationResult.details.nom_pere}</p>
+                                  )}
+                                  {verificationResult.details.nom_mere && (
+                                    <p><strong>Mère:</strong> {verificationResult.details.prenom_mere} {verificationResult.details.nom_mere}</p>
+                                  )}
+                                </>
+                              )}
+                              {verificationResult.details.nom_epoux && (
+                                <>
+                                  <p><strong>Époux:</strong> {verificationResult.details.prenom_epoux} {verificationResult.details.nom_epoux}</p>
+                                  <p><strong>Épouse:</strong> {verificationResult.details.prenom_epouse} {verificationResult.details.nom_epouse}</p>
+                                  {verificationResult.details.date_mariage && (
+                                    <p><strong>Date mariage:</strong> {new Date(verificationResult.details.date_mariage).toLocaleDateString('fr-FR')}</p>
+                                  )}
+                                  {verificationResult.details.lieu_mariage && (
+                                    <p><strong>Lieu mariage:</strong> {verificationResult.details.lieu_mariage}</p>
+                                  )}
+                                </>
+                              )}
+                              {verificationResult.details.nom_defunt && (
+                                <>
+                                  <p><strong>Nom:</strong> {verificationResult.details.nom_defunt}</p>
+                                  <p><strong>Prénom:</strong> {verificationResult.details.prenom_defunt}</p>
+                                  {verificationResult.details.date_deces && (
+                                    <p><strong>Date décès:</strong> {new Date(verificationResult.details.date_deces).toLocaleDateString('fr-FR')}</p>
+                                  )}
+                                  {verificationResult.details.lieu_deces && (
+                                    <p><strong>Lieu décès:</strong> {verificationResult.details.lieu_deces}</p>
+                                  )}
+                                </>
+                              )}
+                              {verificationResult.details.mairies && (
+                                <p><strong>Mairie:</strong> {verificationResult.details.mairies.nom_mairie} - {verificationResult.details.mairies.ville}</p>
+                              )}
+                              <p><strong>Numéro acte:</strong> {verificationResult.details.numero_acte}</p>
+                              {verificationResult.details.annee && (
+                                <p><strong>Année:</strong> {verificationResult.details.annee}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Indicateur de correspondance */}
+                        <div className="mt-3 text-center">
+                          {verificationResult.coherent ? (
+                            <p className="text-sm font-semibold text-green-700">
+                              ✅ Les informations correspondent parfaitement
+                            </p>
+                          ) : (
+                            <p className="text-sm font-semibold text-yellow-700">
+                              ⚠️ Attention : Des différences ont été détectées entre la demande et l'acte original
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {!verificationResult.valide && (
+                      <div className="mt-3 pt-3 border-t border-red-300">
+                        <p className="text-sm text-red-700 font-medium">
+                          ⚠️ Vous ne pouvez QUE rejeter cette demande car le numéro d'acte est invalide.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <p className="text-gray-600">En attente de vérification...</p>
+                  </div>
+                )}
               </div>
 
               {selectedDemande.document_url && (
@@ -480,25 +674,40 @@ export default function DemandesAgentPage() {
                     variant="primary"
                     onClick={() => handleUpdateStatut(selectedDemande.id, 'en_traitement')}
                     className="flex-1"
+                    disabled={verificationLoading}
                   >
                     Mettre en Traitement
                   </Button>
                 )}
                 {(selectedDemande.statut === 'en_attente' || selectedDemande.statut === 'en_traitement') && (
                   <>
-                    <Button
-                      variant="success"
-                      onClick={() => handleUpdateStatut(selectedDemande.id, 'validee')}
-                      className="flex-1"
-                    >
-                      Valider
-                    </Button>
+                    <div className="flex-1">
+                      <Button
+                        variant="success"
+                        onClick={() => handleUpdateStatut(selectedDemande.id, 'approuvee')}
+                        className="w-full"
+                        disabled={verificationLoading || (verificationResult && !verificationResult.valide)}
+                        title={
+                          verificationLoading ? 'Vérification en cours...' :
+                          (verificationResult && !verificationResult.valide) ? 'Impossible d\'approuver : numéro d\'acte invalide' :
+                          'Approuver la demande'
+                        }
+                      >
+                        {verificationLoading ? '🔄 Vérification...' : '✅ Approuver'}
+                      </Button>
+                      {verificationResult && !verificationResult.valide && (
+                        <p className="text-xs text-red-600 mt-1 text-center">
+                          ⚠️ Numéro d'acte invalide
+                        </p>
+                      )}
+                    </div>
                     <Button
                       variant="outline"
                       onClick={() => setShowRejetModal(true)}
                       className="flex-1 text-red-600 border-red-600 hover:bg-red-50"
+                      disabled={verificationLoading}
                     >
-                      Rejeter
+                      ❌ Rejeter
                     </Button>
                   </>
                 )}
