@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
@@ -10,7 +10,7 @@ import { Search, FileText, Clock, CheckCircle, XCircle, AlertTriangle } from 'lu
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function SuivreMentionPage() {
+function SuivreMentionContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClientComponentClient()
@@ -365,5 +365,17 @@ export default function SuivreMentionPage() {
         </main>
       </div>
     </div>
+  )
+}
+
+export default function SuivreMentionPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <p>Chargement...</p>
+      </div>
+    }>
+      <SuivreMentionContent />
+    </Suspense>
   )
 }

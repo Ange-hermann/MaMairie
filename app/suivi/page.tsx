@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
@@ -11,7 +11,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { validateCodeSuivi } from '@/lib/generateCodeSuivi'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function SuiviPage() {
+function SuiviContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClientComponentClient()
@@ -488,5 +488,17 @@ export default function SuiviPage() {
         </main>
       </div>
     </div>
+  )
+}
+
+export default function SuiviPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <p>Chargement...</p>
+      </div>
+    }>
+      <SuiviContent />
+    </Suspense>
   )
 }
