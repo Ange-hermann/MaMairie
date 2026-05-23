@@ -307,6 +307,7 @@ export default function AgentsMinisterePage() {
         prenom: '',
         telephone: '',
         mairie_id: '',
+        type_agent: '',
       })
       setShowCreateForm(false)
       
