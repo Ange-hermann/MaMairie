@@ -168,10 +168,14 @@ export default function AvisMentionsAgentPageSimple() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar />
+      <Sidebar role="agent" />
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
+        <Header 
+          userName={userData ? `${userData.prenom} ${userData.nom}` : 'Agent'}
+          userRole="agent"
+          avatarUrl={userData?.avatar_url}
+        />
         
         <main className="flex-1 overflow-y-auto p-6">
           <div className="max-w-7xl mx-auto">
