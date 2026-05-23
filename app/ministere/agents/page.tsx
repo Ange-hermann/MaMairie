@@ -35,6 +35,7 @@ export default function AgentsMinisterePage() {
   const [userData, setUserData] = useState<any>(null)
   const [agents, setAgents] = useState<any[]>([])
   const [mairies, setMairies] = useState<any[]>([])
+  const [sousPrefectures, setSousPrefectures] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMairie, setSelectedMairie] = useState('all')
@@ -58,6 +59,7 @@ export default function AgentsMinisterePage() {
     prenom: '',
     telephone: '',
     mairie_id: '',
+    type_agent: 'mairie',
   })
 
   const [stats, setStats] = useState({
@@ -100,6 +102,14 @@ export default function AgentsMinisterePage() {
         .order('nom_mairie')
 
       setMairies(mairiesData || [])
+
+      // Récupérer les sous-préfectures
+      const { data: sousPrefecturesData } = await supabase
+        .from('sous_prefectures')
+        .select('id, nom, departement_id')
+        .order('nom')
+
+      setSousPrefectures(sousPrefecturesData || [])
 
       // Récupérer tous les agents
       await fetchAgents()
@@ -966,16 +976,36 @@ export default function AgentsMinisterePage() {
                     />
 
                     <Select
-                      label="Mairie d'affectation"
+                      label="Type d'agent"
+                      value={formData.type_agent || 'mairie'}
+                      onChange={(e) => setFormData({...formData, type_agent: e.target.value, mairie_id: ''})}
+                      options={[
+                        { value: 'mairie', label: '🏢 Agent de Mairie' },
+                        { value: 'sous_prefecture', label: '🏘️ Agent de Sous-préfecture' }
+                      ]}
+                    />
+
+                    <Select
+                      label={formData.type_agent === 'sous_prefecture' ? "Sous-préfecture d'affectation" : "Mairie d'affectation"}
                       value={formData.mairie_id}
                       onChange={(e) => setFormData({...formData, mairie_id: e.target.value})}
-                      options={[
-                        { value: '', label: 'Aucune (à assigner plus tard)' },
-                        ...mairies.map(m => ({ 
-                          value: m.id, 
-                          label: `${m.nom_mairie} - ${m.ville}` 
-                        }))
-                      ]}
+                      options={
+                        formData.type_agent === 'sous_prefecture' 
+                          ? [
+                              { value: '', label: 'Aucune (à assigner plus tard)' },
+                              ...sousPrefectures.map(sp => ({ 
+                                value: sp.id, 
+                                label: `Sous-préfecture de ${sp.nom}` 
+                              }))
+                            ]
+                          : [
+                              { value: '', label: 'Aucune (à assigner plus tard)' },
+                              ...mairies.map(m => ({ 
+                                value: m.id, 
+                                label: `${m.nom_mairie} - ${m.ville}` 
+                              }))
+                            ]
+                      }
                     />
                   </div>
 

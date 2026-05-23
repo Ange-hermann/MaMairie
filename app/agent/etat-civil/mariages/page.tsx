@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Heart, Plus, Search, Edit, Trash2, FileText } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
+import { telechargerPdfActeMariage } from '@/lib/genererPdfActeMariage'
 
 export default function MariagesPage() {
   const router = useRouter()
@@ -34,6 +35,19 @@ export default function MariagesPage() {
     lieu_mariage: '',
     numero_acte: '',
     annee: new Date().getFullYear().toString(),
+    // Témoins
+    temoin1_nom: '',
+    temoin1_prenom: '',
+    temoin1_numero_cni: '',
+    temoin1_nationalite: 'Ivoirienne',
+    temoin1_profession: '',
+    temoin1_adresse: '',
+    temoin2_nom: '',
+    temoin2_prenom: '',
+    temoin2_numero_cni: '',
+    temoin2_nationalite: 'Ivoirienne',
+    temoin2_profession: '',
+    temoin2_adresse: '',
   })
 
   useEffect(() => {
@@ -136,6 +150,19 @@ export default function MariagesPage() {
       lieu_mariage: mariage.lieu_mariage,
       numero_acte: mariage.numero_acte,
       annee: mariage.annee.toString(),
+      // Témoins
+      temoin1_nom: mariage.temoin1_nom || '',
+      temoin1_prenom: mariage.temoin1_prenom || '',
+      temoin1_numero_cni: mariage.temoin1_numero_cni || '',
+      temoin1_nationalite: mariage.temoin1_nationalite || 'Ivoirienne',
+      temoin1_profession: mariage.temoin1_profession || '',
+      temoin1_adresse: mariage.temoin1_adresse || '',
+      temoin2_nom: mariage.temoin2_nom || '',
+      temoin2_prenom: mariage.temoin2_prenom || '',
+      temoin2_numero_cni: mariage.temoin2_numero_cni || '',
+      temoin2_nationalite: mariage.temoin2_nationalite || 'Ivoirienne',
+      temoin2_profession: mariage.temoin2_profession || '',
+      temoin2_adresse: mariage.temoin2_adresse || '',
     })
     setEditingId(mariage.id)
     setShowForm(true)
@@ -175,6 +202,19 @@ export default function MariagesPage() {
       lieu_mariage: '',
       numero_acte: '',
       annee: new Date().getFullYear().toString(),
+      // Témoins
+      temoin1_nom: '',
+      temoin1_prenom: '',
+      temoin1_numero_cni: '',
+      temoin1_nationalite: 'Ivoirienne',
+      temoin1_profession: '',
+      temoin1_adresse: '',
+      temoin2_nom: '',
+      temoin2_prenom: '',
+      temoin2_numero_cni: '',
+      temoin2_nationalite: 'Ivoirienne',
+      temoin2_profession: '',
+      temoin2_adresse: '',
     })
     setEditingId(null)
     setShowForm(false)
@@ -347,6 +387,107 @@ export default function MariagesPage() {
                   </div>
                 </div>
 
+                {/* Témoins */}
+                <div>
+                  <h3 className="font-semibold text-gray-700 mb-4 text-lg">👥 Témoins du Mariage</h3>
+                  
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {/* Témoin 1 */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                        👤 Témoin 1
+                      </h4>
+                      <div className="space-y-3">
+                        <Input
+                          label="Nom"
+                          value={formData.temoin1_nom}
+                          onChange={(e) => setFormData({ ...formData, temoin1_nom: e.target.value })}
+                          required
+                        />
+                        <Input
+                          label="Prénom(s)"
+                          value={formData.temoin1_prenom}
+                          onChange={(e) => setFormData({ ...formData, temoin1_prenom: e.target.value })}
+                          required
+                        />
+                        <Input
+                          label="Numéro CNI"
+                          value={formData.temoin1_numero_cni}
+                          onChange={(e) => setFormData({ ...formData, temoin1_numero_cni: e.target.value })}
+                          placeholder="Ex: CI1234567890"
+                          required
+                        />
+                        <Input
+                          label="Nationalité"
+                          value={formData.temoin1_nationalite}
+                          onChange={(e) => setFormData({ ...formData, temoin1_nationalite: e.target.value })}
+                          required
+                        />
+                        <Input
+                          label="Profession"
+                          value={formData.temoin1_profession}
+                          onChange={(e) => setFormData({ ...formData, temoin1_profession: e.target.value })}
+                          placeholder="Ex: Enseignant"
+                          required
+                        />
+                        <Input
+                          label="Adresse (optionnel)"
+                          value={formData.temoin1_adresse}
+                          onChange={(e) => setFormData({ ...formData, temoin1_adresse: e.target.value })}
+                          placeholder="Ex: Cocody, Abidjan"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Témoin 2 */}
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
+                        👤 Témoin 2
+                      </h4>
+                      <div className="space-y-3">
+                        <Input
+                          label="Nom"
+                          value={formData.temoin2_nom}
+                          onChange={(e) => setFormData({ ...formData, temoin2_nom: e.target.value })}
+                          required
+                        />
+                        <Input
+                          label="Prénom(s)"
+                          value={formData.temoin2_prenom}
+                          onChange={(e) => setFormData({ ...formData, temoin2_prenom: e.target.value })}
+                          required
+                        />
+                        <Input
+                          label="Numéro CNI"
+                          value={formData.temoin2_numero_cni}
+                          onChange={(e) => setFormData({ ...formData, temoin2_numero_cni: e.target.value })}
+                          placeholder="Ex: CI0987654321"
+                          required
+                        />
+                        <Input
+                          label="Nationalité"
+                          value={formData.temoin2_nationalite}
+                          onChange={(e) => setFormData({ ...formData, temoin2_nationalite: e.target.value })}
+                          required
+                        />
+                        <Input
+                          label="Profession"
+                          value={formData.temoin2_profession}
+                          onChange={(e) => setFormData({ ...formData, temoin2_profession: e.target.value })}
+                          placeholder="Ex: Commerçant"
+                          required
+                        />
+                        <Input
+                          label="Adresse (optionnel)"
+                          value={formData.temoin2_adresse}
+                          onChange={(e) => setFormData({ ...formData, temoin2_adresse: e.target.value })}
+                          placeholder="Ex: Yopougon, Abidjan"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Informations administratives */}
                 <div>
                   <h3 className="font-semibold text-gray-700 mb-3">Informations administratives</h3>
@@ -452,6 +593,57 @@ export default function MariagesPage() {
                               <Trash2 size={18} />
                             </button>
                             <button
+                              onClick={async () => {
+                                try {
+                                  // Récupérer les infos de la mairie
+                                  const { data: mairieData } = await supabase
+                                    .from('mairies')
+                                    .select('nom_mairie, ville, district')
+                                    .eq('id', userData.mairie_id)
+                                    .single()
+
+                                  telechargerPdfActeMariage({
+                                    numero_acte: `${mariage.numero_acte}/${mariage.annee}`,
+                                    date_acte: new Date().toLocaleDateString('fr-FR'),
+                                    nom_epoux: mariage.nom_epoux,
+                                    prenom_epoux: mariage.prenom_epoux,
+                                    date_naissance_epoux: new Date(mariage.date_naissance_epoux || '').toLocaleDateString('fr-FR'),
+                                    nationalite_epoux: 'Ivoirienne',
+                                    profession_epoux: 'Non renseigné',
+                                    domicile_epoux: mariage.lieu_naissance_epoux || 'Non renseigné',
+                                    nom_epouse: mariage.nom_epouse,
+                                    prenom_epouse: mariage.prenom_epouse,
+                                    date_naissance_epouse: new Date(mariage.date_naissance_epouse || '').toLocaleDateString('fr-FR'),
+                                    nationalite_epouse: 'Ivoirienne',
+                                    profession_epouse: 'Non renseigné',
+                                    domicile_epouse: mariage.lieu_naissance_epouse || 'Non renseigné',
+                                    date_mariage: new Date(mariage.date_mariage).toLocaleDateString('fr-FR'),
+                                    lieu_mariage: mariage.lieu_mariage,
+                                    temoin1_nom: mariage.temoin1_nom || '',
+                                    temoin1_prenom: mariage.temoin1_prenom || '',
+                                    temoin1_profession: mariage.temoin1_profession || '',
+                                    temoin1_domicile: mariage.temoin1_adresse || '',
+                                    temoin2_nom: mariage.temoin2_nom || '',
+                                    temoin2_prenom: mariage.temoin2_prenom || '',
+                                    temoin2_profession: mariage.temoin2_profession || '',
+                                    temoin2_domicile: mariage.temoin2_adresse || '',
+                                    mairie: {
+                                      nom: mairieData?.nom_mairie || '',
+                                      commune: mairieData?.ville || '',
+                                      district: mairieData?.district || 'DISTRICT AUTONOME D\'ABIDJAN'
+                                    },
+                                    officier: {
+                                      nom: userData.nom,
+                                      prenom: userData.prenom,
+                                      fonction: 'Maire'
+                                    }
+                                  })
+
+                                  alert('✅ PDF de l\'acte de mariage téléchargé !')
+                                } catch (error: any) {
+                                  alert('❌ Erreur : ' + error.message)
+                                }
+                              }}
                               className="p-1 text-green-600 hover:bg-green-50 rounded"
                               title="Générer PDF"
                             >

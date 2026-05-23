@@ -37,11 +37,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ role }) => {
     { href: '/dashboard-citoyen', label: 'Tableau de Bord', icon: LayoutDashboard },
     { href: '/mes-demandes', label: 'Mes Demandes', icon: FileText },
     { href: '/demande-extrait', label: 'Nouvelle Demande', icon: FileText },
+    { href: '/citoyen/declaration-naissance', label: 'Déclarer une Naissance', icon: Baby },
+    { href: '/citoyen/avis-mention', label: 'Avis de Mention', icon: AlertTriangle },
+    { href: '/citoyen/suivre-mention', label: 'Suivre Mention', icon: FileCheck },
+    { href: '/suivi', label: 'Suivre une Déclaration', icon: FileCheck },
   ]
   
   const agentLinks = [
     { href: '/dashboard-agent', label: 'Tableau de Bord', icon: LayoutDashboard },
-    { href: '/agent/demandes', label: 'Demandes', icon: FileText },
+    { href: '/agent/demandes', label: 'Demandes Extraits', icon: FileText },
+    { href: '/agent/declarations', label: 'Déclarations Naissance', icon: Baby },
+    { href: '/agent/avis-mentions', label: 'Avis de Mention', icon: AlertTriangle },
   ]
 
   const etatCivilLinks = [

@@ -16,7 +16,8 @@ import {
   Users,
   Building2,
   Download,
-  Calendar
+  Calendar,
+  MapPin
 } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
@@ -67,6 +68,10 @@ export default function StatistiquesNationalesPage() {
       rejetees: 0,
     },
     mairies: {
+      total: 0,
+      actives: 0,
+    },
+    sous_prefectures: {
       total: 0,
       actives: 0,
     },
@@ -173,6 +178,11 @@ export default function StatistiquesNationalesPage() {
         .from('mairies')
         .select('statut')
 
+      // Statistiques Sous-préfectures
+      const { data: sousPrefectures } = await supabase
+        .from('sous_prefectures')
+        .select('id')
+
       // Statistiques Agents
       const { data: agents } = await supabase
         .from('users')
@@ -205,6 +215,10 @@ export default function StatistiquesNationalesPage() {
         mairies: {
           total: mairies?.length || 0,
           actives: mairies?.filter(m => m.statut === 'active').length || 0,
+        },
+        sous_prefectures: {
+          total: sousPrefectures?.length || 0,
+          actives: sousPrefectures?.length || 0, // Toutes actives par défaut
         },
         agents: {
           total: agents?.length || 0,
@@ -383,22 +397,30 @@ export default function StatistiquesNationalesPage() {
   }
 
   const fetchPerformanceMairies = async () => {
-    console.log('📊 Récupération Top 10 mairies...')
+    console.log('📊 Récupération Top 10 structures (mairies + SP)...')
     
+    // Charger les mairies
     const { data: mairies } = await supabase
       .from('mairies')
       .select('id, nom_mairie, ville, region')
       .order('nom_mairie')
 
-    if (!mairies) {
-      console.warn('⚠️ Aucune mairie trouvée')
+    // Charger les sous-préfectures
+    const { data: sousPrefectures } = await supabase
+      .from('sous_prefectures')
+      .select('id, nom')
+      .order('nom')
+
+    if (!mairies && !sousPrefectures) {
+      console.warn('⚠️ Aucune structure trouvée')
       return
     }
 
-    console.log(`✅ ${mairies.length} mairies trouvées`)
+    console.log(`✅ ${mairies?.length || 0} mairies + ${sousPrefectures?.length || 0} SP trouvées`)
 
-    const performance = await Promise.all(
-      mairies.map(async (mairie) => {
+    // Performance des mairies
+    const performanceMairies = await Promise.all(
+      (mairies || []).map(async (mairie) => {
         const { count: totalCount } = await supabase
           .from('requests')
           .select('*', { count: 'exact', head: true })
@@ -415,6 +437,7 @@ export default function StatistiquesNationalesPage() {
         const taux = total > 0 ? Math.round((validees / total) * 100) : 0
 
         return {
+          type: 'mairie',
           mairie: `${mairie.nom_mairie} (${mairie.region || mairie.ville})`,
           total: total,
           validees: validees,
@@ -423,12 +446,41 @@ export default function StatistiquesNationalesPage() {
       })
     )
 
-    // Trier par total et prendre le top 10
+    // Performance des sous-préfectures
+    const performanceSP = await Promise.all(
+      (sousPrefectures || []).map(async (sp) => {
+        const { count: totalCount } = await supabase
+          .from('requests')
+          .select('*', { count: 'exact', head: true })
+          .eq('mairie_id', sp.id)
+
+        const { count: valideesCount } = await supabase
+          .from('requests')
+          .select('*', { count: 'exact', head: true })
+          .eq('mairie_id', sp.id)
+          .eq('statut', 'validee')
+
+        const total = totalCount || 0
+        const validees = valideesCount || 0
+        const taux = total > 0 ? Math.round((validees / total) * 100) : 0
+
+        return {
+          type: 'sous_prefecture',
+          mairie: `SP de ${sp.nom}`,
+          total: total,
+          validees: validees,
+          taux: taux,
+        }
+      })
+    )
+
+    // Combiner et trier par total
+    const performance = [...performanceMairies, ...performanceSP]
     const top10 = performance
       .sort((a, b) => b.total - a.total)
       .slice(0, 10)
 
-    console.log('✅ Top 10 mairies:', top10)
+    console.log('✅ Top 10 structures:', top10)
     setPerformanceMairies(top10)
   }
 
@@ -575,7 +627,7 @@ export default function StatistiquesNationalesPage() {
           </div>
 
           {/* Statistiques Secondaires */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6 mb-4 md:mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6 mb-4 md:mb-6">
             <Card className="border-l-4 border-orange-500 hover-lift animate-slideInLeft p-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm md:text-base font-semibold text-gray-700">Mairies</h3>
@@ -584,6 +636,17 @@ export default function StatistiquesNationalesPage() {
               <div className="flex flex-col md:flex-row md:items-baseline gap-1 md:gap-3">
                 <p className="text-2xl md:text-3xl font-bold text-gray-800">{stats.mairies.total}</p>
                 <p className="text-xs md:text-sm text-gray-600">dont {stats.mairies.actives} actives</p>
+              </div>
+            </Card>
+
+            <Card className="border-l-4 border-purple-500 hover-lift animate-slideInUp p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm md:text-base font-semibold text-gray-700">Sous-préfectures</h3>
+                <MapPin className="text-purple-600" size={20} />
+              </div>
+              <div className="flex flex-col md:flex-row md:items-baseline gap-1 md:gap-3">
+                <p className="text-2xl md:text-3xl font-bold text-gray-800">{stats.sous_prefectures?.total || 0}</p>
+                <p className="text-xs md:text-sm text-gray-600">dont {stats.sous_prefectures?.actives || 0} actives</p>
               </div>
             </Card>
 
@@ -674,32 +737,38 @@ export default function StatistiquesNationalesPage() {
           {/* Performance des Mairies */}
           <Card className="animate-fadeIn p-4">
             <h2 className="text-base md:text-xl font-bold text-gray-800 mb-3 md:mb-4">
-              Top 10 Mairies
+              Top 10 Structures (Mairies + Sous-préfectures)
             </h2>
             
             <div className="overflow-x-auto -mx-4 md:mx-0">
-              <table className="w-full min-w-[500px]">
+              <table className="w-full min-w-[600px]">
                 <thead>
                   <tr className="border-b-2 border-gray-200">
-                    <th className="text-left p-2 md:p-3 text-xs md:text-sm font-semibold text-gray-700">Mairie</th>
+                    <th className="text-left p-2 md:p-3 text-xs md:text-sm font-semibold text-gray-700">Type</th>
+                    <th className="text-left p-2 md:p-3 text-xs md:text-sm font-semibold text-gray-700">Structure</th>
                     <th className="text-center p-2 md:p-3 text-xs md:text-sm font-semibold text-gray-700">Total</th>
                     <th className="text-center p-2 md:p-3 text-xs md:text-sm font-semibold text-gray-700">Validées</th>
                     <th className="text-center p-2 md:p-3 text-xs md:text-sm font-semibold text-gray-700">Taux</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {performanceMairies.map((mairie, index) => (
+                  {performanceMairies.map((item, index) => (
                     <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="p-2 md:p-3 text-xs md:text-sm font-medium">{mairie.mairie}</td>
-                      <td className="p-2 md:p-3 text-xs md:text-sm text-center">{mairie.total}</td>
-                      <td className="p-2 md:p-3 text-xs md:text-sm text-center">{mairie.validees}</td>
+                      <td className="p-2 md:p-3 text-center">
+                        <span className="text-lg">
+                          {item.type === 'mairie' ? '🏢' : '🏘️'}
+                        </span>
+                      </td>
+                      <td className="p-2 md:p-3 text-xs md:text-sm font-medium">{item.mairie}</td>
+                      <td className="p-2 md:p-3 text-xs md:text-sm text-center">{item.total}</td>
+                      <td className="p-2 md:p-3 text-xs md:text-sm text-center">{item.validees}</td>
                       <td className="p-2 md:p-3 text-center">
                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          mairie.taux >= 80 ? 'bg-green-100 text-green-600' :
-                          mairie.taux >= 60 ? 'bg-yellow-100 text-yellow-600' :
+                          item.taux >= 80 ? 'bg-green-100 text-green-600' :
+                          item.taux >= 60 ? 'bg-yellow-100 text-yellow-600' :
                           'bg-red-100 text-red-600'
                         }`}>
-                          {mairie.taux}%
+                          {item.taux}%
                         </span>
                       </td>
                     </tr>
@@ -722,10 +791,11 @@ export default function StatistiquesNationalesPage() {
             </div>
             
             <div className="overflow-x-auto -mx-4 md:mx-0">
-              <table className="w-full min-w-[700px]">
+              <table className="w-full min-w-[750px]">
                 <thead>
                   <tr className="border-b-2 border-gray-200">
-                    <th className="text-left p-2 md:p-3 text-xs md:text-sm font-semibold text-gray-700">Mairie</th>
+                    <th className="text-left p-2 md:p-3 text-xs md:text-sm font-semibold text-gray-700">Type</th>
+                    <th className="text-left p-2 md:p-3 text-xs md:text-sm font-semibold text-gray-700">Structure</th>
                     <th className="text-left p-2 md:p-3 text-xs md:text-sm font-semibold text-gray-700 hidden md:table-cell">Ville</th>
                     <th className="text-left p-2 md:p-3 text-xs md:text-sm font-semibold text-gray-700 hidden lg:table-cell">Région</th>
                     <th className="text-center p-2 md:p-3 text-xs md:text-sm font-semibold text-gray-700">Naiss.</th>
@@ -737,6 +807,11 @@ export default function StatistiquesNationalesPage() {
                 <tbody>
                   {populationParMairie.slice(0, 20).map((mairie, index) => (
                     <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="p-2 md:p-3 text-center">
+                        <span className="text-lg">
+                          {mairie.type === 'mairie' ? '🏢' : mairie.type === 'sous_prefecture' ? '🏘️' : '🏢'}
+                        </span>
+                      </td>
                       <td className="p-2 md:p-3 text-xs md:text-sm font-medium">{mairie.nom_mairie}</td>
                       <td className="p-2 md:p-3 text-xs md:text-sm text-gray-600 hidden md:table-cell">{mairie.ville}</td>
                       <td className="p-2 md:p-3 text-xs md:text-sm text-gray-600 hidden lg:table-cell">{mairie.region}</td>

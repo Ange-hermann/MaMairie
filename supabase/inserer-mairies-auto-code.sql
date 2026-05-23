@@ -1,0 +1,128 @@
+-- ========================================
+-- MAIRIES AVEC CODE AUTOMATIQUE
+-- ========================================
+
+-- Nettoyer
+TRUNCATE TABLE mairies CASCADE;
+
+-- Insérer avec génération automatique du code
+INSERT INTO mairies (nom_mairie, ville, pays, code_mairie)
+SELECT 
+  nom,
+  ville,
+  'Côte d''Ivoire',
+  'MAI-' || UPPER(LEFT(REPLACE(ville, ' ', ''), 3)) || '-' || LPAD(ROW_NUMBER() OVER (ORDER BY nom)::TEXT, 3, '0')
+FROM (VALUES
+  ('Mairie d''Abobo', 'Abobo'),
+  ('Mairie d''Adjamé', 'Adjamé'),
+  ('Mairie d''Attécoubé', 'Attécoubé'),
+  ('Mairie de Cocody', 'Cocody'),
+  ('Mairie de Koumassi', 'Koumassi'),
+  ('Mairie de Marcory', 'Marcory'),
+  ('Mairie du Plateau', 'Plateau'),
+  ('Mairie de Port-Bouët', 'Port-Bouët'),
+  ('Mairie de Treichville', 'Treichville'),
+  ('Mairie de Yopougon', 'Yopougon'),
+  ('Mairie de Songon', 'Songon'),
+  ('Mairie de Bingerville', 'Bingerville'),
+  ('Mairie d''Anyama', 'Anyama'),
+  ('Mairie de Bouaké', 'Bouaké'),
+  ('Mairie de Yamoussoukro', 'Yamoussoukro'),
+  ('Mairie de Daloa', 'Daloa'),
+  ('Mairie de Korhogo', 'Korhogo'),
+  ('Mairie de San-Pédro', 'San-Pédro'),
+  ('Mairie de Man', 'Man'),
+  ('Mairie de Gagnoa', 'Gagnoa'),
+  ('Mairie d''Abengourou', 'Abengourou'),
+  ('Mairie de Divo', 'Divo'),
+  ('Mairie de Ferkessédougou', 'Ferkessédougou'),
+  ('Mairie de Bondoukou', 'Bondoukou'),
+  ('Mairie de Soubré', 'Soubré'),
+  ('Mairie d''Odienné', 'Odienné'),
+  ('Mairie de Séguéla', 'Séguéla'),
+  ('Mairie de Sassandra', 'Sassandra'),
+  ('Mairie de Tabou', 'Tabou'),
+  ('Mairie de Grand-Bassam', 'Grand-Bassam'),
+  ('Mairie d''Aboisso', 'Aboisso'),
+  ('Mairie d''Adzopé', 'Adzopé'),
+  ('Mairie d''Agboville', 'Agboville'),
+  ('Mairie de Dabou', 'Dabou'),
+  ('Mairie de Daoukro', 'Daoukro'),
+  ('Mairie de Dimbokro', 'Dimbokro'),
+  ('Mairie d''Issia', 'Issia'),
+  ('Mairie de Katiola', 'Katiola'),
+  ('Mairie de Boundiali', 'Boundiali'),
+  ('Mairie de Guiglo', 'Guiglo'),
+  ('Mairie de Duékoué', 'Duékoué'),
+  ('Mairie de Danané', 'Danané'),
+  ('Mairie de Touba', 'Touba'),
+  ('Mairie de Mankono', 'Mankono'),
+  ('Mairie de Bouna', 'Bouna'),
+  ('Mairie de Tanda', 'Tanda'),
+  ('Mairie d''Agnibilékrou', 'Agnibilékrou'),
+  ('Mairie de Bongouanou', 'Bongouanou'),
+  ('Mairie de Toumodi', 'Toumodi'),
+  ('Mairie de Tiassalé', 'Tiassalé'),
+  ('Mairie de Lakota', 'Lakota'),
+  ('Mairie d''Oumé', 'Oumé'),
+  ('Mairie de Vavoua', 'Vavoua'),
+  ('Mairie de Bouaflé', 'Bouaflé'),
+  ('Mairie de Zuénoula', 'Zuénoula'),
+  ('Mairie de Sinfra', 'Sinfra'),
+  ('Mairie de Béoumi', 'Béoumi'),
+  ('Mairie de Sakassou', 'Sakassou'),
+  ('Mairie de Botro', 'Botro'),
+  ('Mairie de Dabakala', 'Dabakala'),
+  ('Mairie de Niakaramadougou', 'Niakaramadougou'),
+  ('Mairie de Didiévi', 'Didiévi'),
+  ('Mairie de Tiébissou', 'Tiébissou'),
+  ('Mairie de Bocanda', 'Bocanda'),
+  ('Mairie de M''''Bahiakro', 'M''''Bahiakro'),
+  ('Mairie d''Arrah', 'Arrah'),
+  ('Mairie de Sikensi', 'Sikensi'),
+  ('Mairie d''Alépé', 'Alépé'),
+  ('Mairie de Yakassé-Attobrou', 'Yakassé-Attobrou'),
+  ('Mairie de Jacqueville', 'Jacqueville'),
+  ('Mairie de Grand-Lahou', 'Grand-Lahou'),
+  ('Mairie de Bloléquin', 'Bloléquin'),
+  ('Mairie de Toulépleu', 'Toulépleu'),
+  ('Mairie de Bangolo', 'Bangolo'),
+  ('Mairie de Biankouma', 'Biankouma'),
+  ('Mairie de Zouan-Hounien', 'Zouan-Hounien'),
+  ('Mairie de Fresco', 'Fresco'),
+  ('Mairie de Buyo', 'Buyo'),
+  ('Mairie de Méagui', 'Méagui'),
+  ('Mairie de Grand-Béréby', 'Grand-Béréby'),
+  ('Mairie d''Adiaké', 'Adiaké'),
+  ('Mairie de Tiapoum', 'Tiapoum'),
+  ('Mairie de Minignan', 'Minignan'),
+  ('Mairie de Madinani', 'Madinani'),
+  ('Mairie de Gbéléban', 'Gbéléban'),
+  ('Mairie de Guitry', 'Guitry'),
+  ('Mairie de Kong', 'Kong'),
+  ('Mairie d''Ouangolodougou', 'Ouangolodougou'),
+  ('Mairie de Kouto', 'Kouto'),
+  ('Mairie de Tengréla', 'Tengréla'),
+  ('Mairie de Sinématiali', 'Sinématiali'),
+  ('Mairie de Kani', 'Kani'),
+  ('Mairie de Koro', 'Koro'),
+  ('Mairie de Doropo', 'Doropo'),
+  ('Mairie de Téhini', 'Téhini'),
+  ('Mairie de Sandégué', 'Sandégué'),
+  ('Mairie d''Attiégouakro', 'Attiégouakro'),
+  ('Mairie de Kossou', 'Kossou'),
+  ('Mairie de Bonoua', 'Bonoua'),
+  ('Mairie d''Ayamé', 'Ayamé'),
+  ('Mairie de Samatiguila', 'Samatiguila')
+) AS t(nom, ville);
+
+-- Vérification
+SELECT 
+  'Total mairies' as info,
+  COUNT(*) as nombre
+FROM mairies;
+
+SELECT nom_mairie, ville, pays, code_mairie 
+FROM mairies 
+ORDER BY nom_mairie 
+LIMIT 20;

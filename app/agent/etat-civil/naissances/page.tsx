@@ -190,10 +190,19 @@ export default function NaissancesPage() {
         throw new Error('Données manquantes')
       }
       
+      // Récupérer les mentions apposées sur cet acte
+      const { data: mentions } = await supabase
+        .from('mentions_apposees')
+        .select('*')
+        .eq('acte_id', naissanceId)
+        .eq('type_acte', 'naissance')
+        .order('date_mention', { ascending: true })
+      
       const pdfBlob = await generateActeNaissance(
         naissance,
         mairieData,
-        `${userData.prenom} ${userData.nom}`
+        `${userData.prenom} ${userData.nom}`,
+        mentions || []
       )
       
       const filename = `Acte_Naissance_${naissance.nom_enfant}_${naissance.numero_acte}.pdf`
@@ -283,7 +292,7 @@ export default function NaissancesPage() {
                 <div>
                   <p className="text-sm opacity-90">Filles</p>
                   <p className="text-4xl font-bold mt-2">
-                    {naissances.filter(n => n.sexe === 'Féminin').length}
+                    {naissances.filter(n => n.sexe?.toLowerCase().includes('f')).length}
                   </p>
                 </div>
                 <Baby size={48} className="opacity-20" />
@@ -295,7 +304,7 @@ export default function NaissancesPage() {
                 <div>
                   <p className="text-sm opacity-90">Garçons</p>
                   <p className="text-4xl font-bold mt-2">
-                    {naissances.filter(n => n.sexe === 'Masculin').length}
+                    {naissances.filter(n => n.sexe?.toLowerCase().includes('m')).length}
                   </p>
                 </div>
                 <Baby size={48} className="opacity-20" />

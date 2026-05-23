@@ -42,6 +42,11 @@ export default function Home() {
                 Commencer maintenant
               </Button>
             </Link>
+            <Link href="/suivi" className="w-full sm:w-auto">
+              <Button variant="outline" className="w-full sm:w-auto text-sm md:text-base">
+                🔍 Suivre une déclaration
+              </Button>
+            </Link>
           </div>
         </div>
       </section>

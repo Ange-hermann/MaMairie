@@ -33,6 +33,19 @@ interface Mariage {
   lieu_mariage: string
   numero_acte: string
   annee: number
+  // Témoins
+  temoin1_nom?: string
+  temoin1_prenom?: string
+  temoin1_numero_cni?: string
+  temoin1_nationalite?: string
+  temoin1_profession?: string
+  temoin1_adresse?: string
+  temoin2_nom?: string
+  temoin2_prenom?: string
+  temoin2_numero_cni?: string
+  temoin2_nationalite?: string
+  temoin2_profession?: string
+  temoin2_adresse?: string
 }
 
 interface Deces {
@@ -200,72 +213,170 @@ const addFooter = (doc: jsPDF, numeroActe: string, annee: number, agentNom: stri
 export const generateActeNaissance = async (
   naissance: Naissance,
   mairie: Mairie,
-  agentNom: string
+  agentNom: string,
+  mentions: any[] = []
 ): Promise<Blob> => {
   const doc = new jsPDF()
   
-  // QR Code de vérification (contient le numéro d'acte)
+  // Bordure
+  doc.setDrawColor(0, 0, 0)
+  doc.setLineWidth(0.5)
+  doc.rect(10, 10, 190, 277)
+  
+  // En-tête République
+  let y = 20
+  doc.setFontSize(12)
+  doc.setFont('helvetica', 'bold')
+  doc.text('RÉPUBLIQUE DE COTE D\'IVOIRE', 105, y, { align: 'center' })
+  y += 5
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.text('Union - Discipline - Travail', 105, y, { align: 'center' })
+  y += 8
+  
+  // Ligne de séparation
+  doc.setLineWidth(0.3)
+  doc.line(20, y, 190, y)
+  y += 8
+  
+  // Informations Mairie
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'bold')
+  doc.text('DISTRICT AUTONOME D\'ABIDJAN', 105, y, { align: 'center' })
+  y += 5
+  doc.text(`MAIRIE DE LA COMMUNE DE ${mairie.ville.toUpperCase()}`, 105, y, { align: 'center' })
+  y += 5
+  doc.text('SERVICE DE L\'ÉTAT CIVIL', 105, y, { align: 'center' })
+  y += 10
+  
+  // Titre
+  doc.setFontSize(14)
+  doc.text('ACTE DE NAISSANCE', 105, y, { align: 'center' })
+  y += 8
+  
+  // Numéro et date
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  const dateActe = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+  doc.text(`N° ${naissance.annee} / AN / ${naissance.numero_acte}`, 20, y)
+  doc.text(`Dressé le ${dateActe}`, 190, y, { align: 'right' })
+  y += 8
+  
+  // Formule d'ouverture
+  doc.setFontSize(9)
+  const dateNaissance = new Date(naissance.date_naissance)
+  const heureText = naissance.heure_naissance ? ` à ${formatTime(naissance.heure_naissance)}` : ''
+  doc.text(`L'an deux mille vingt-quatre et le ${formatDate(naissance.date_naissance)}${heureText}, par-devant nous ${agentNom},`, 20, y, { maxWidth: 170 })
+  y += 10
+  doc.text(`Officier de l'État Civil de la commune de ${mairie.ville}, a comparu :`, 20, y)
+  y += 10
+  
+  // LE DÉCLARANT
+  doc.setFont('helvetica', 'bold')
+  doc.text('LE DÉCLARANT', 105, y, { align: 'center' })
+  y += 5
+  doc.setFont('helvetica', 'normal')
+  
+  // Tableau déclarant
+  const drawRow = (label: string, value: string, yPos: number) => {
+    doc.setLineWidth(0.1)
+    doc.line(20, yPos, 190, yPos)
+    doc.text(label, 22, yPos + 4)
+    doc.text(value, 80, yPos + 4)
+    return yPos + 6
+  }
+  
+  y = drawRow('Nom et prénoms :', `${naissance.prenom_pere || ''} ${naissance.nom_pere || ''}`.trim() || 'Non déclaré', y)
+  y = drawRow('Date de naissance :', 'Non renseigné', y)
+  y = drawRow('Profession :', 'Non renseigné', y)
+  y = drawRow('Domicile :', naissance.lieu_naissance, y)
+  y = drawRow('Pièce d\'identité :', 'Non renseigné', y)
+  y = drawRow('Qualité :', 'Père de l\'enfant', y)
+  doc.line(20, y, 190, y)
+  y += 8
+  
+  // L'ENFANT
+  doc.setFont('helvetica', 'bold')
+  doc.text('L\'ENFANT', 105, y, { align: 'center' })
+  y += 5
+  doc.setFont('helvetica', 'normal')
+  
+  y = drawRow('Nom :', naissance.nom_enfant.toUpperCase(), y)
+  y = drawRow('Prénom(s) :', naissance.prenom_enfant, y)
+  y = drawRow('Sexe :', naissance.sexe, y)
+  y = drawRow('Date de naissance :', `${formatDate(naissance.date_naissance)}${heureText}`, y)
+  y = drawRow('Lieu de naissance :', naissance.lieu_naissance, y)
+  doc.line(20, y, 190, y)
+  y += 8
+  
+  // LE PÈRE
+  doc.setFont('helvetica', 'bold')
+  doc.text('LE PÈRE', 105, y, { align: 'center' })
+  y += 5
+  doc.setFont('helvetica', 'normal')
+  
+  y = drawRow('Nom et prénoms :', `${naissance.prenom_pere || ''} ${naissance.nom_pere || ''}`.trim() || 'Non déclaré', y)
+  y = drawRow('Date et lieu de naissance :', 'Non renseigné', y)
+  y = drawRow('Profession :', 'Non renseigné', y)
+  y = drawRow('Domicile :', naissance.lieu_naissance, y)
+  y = drawRow('Nationalité :', 'Ivoirienne', y)
+  doc.line(20, y, 190, y)
+  y += 8
+  
+  // LA MÈRE
+  doc.setFont('helvetica', 'bold')
+  doc.text('LA MÈRE', 105, y, { align: 'center' })
+  y += 5
+  doc.setFont('helvetica', 'normal')
+  
+  y = drawRow('Nom et prénoms :', `${naissance.prenom_mere || ''} ${naissance.nom_mere || ''}`.trim() || 'Non déclaré', y)
+  y = drawRow('Date et lieu de naissance :', 'Non renseigné', y)
+  y = drawRow('Profession :', 'Non renseigné', y)
+  y = drawRow('Domicile :', naissance.lieu_naissance, y)
+  y = drawRow('Nationalité :', 'Ivoirienne', y)
+  doc.line(20, y, 190, y)
+  y += 10
+  
+  // MENTIONS (si présentes)
+  if (mentions && mentions.length > 0) {
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.text('MENTIONS', 105, y, { align: 'center' })
+    y += 6
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    
+    mentions.forEach((mention, index) => {
+      const typeMention = mention.type_mention === 'adoption' ? 'Adoption' :
+                         mention.type_mention === 'mariage' ? 'Mariage' :
+                         mention.type_mention === 'divorce' ? 'Divorce' :
+                         mention.type_mention === 'deces' ? 'Décès' :
+                         mention.type_mention === 'reconnaissance' ? 'Reconnaissance' :
+                         mention.type_mention === 'changement_nom' ? 'Changement de nom' : mention.type_mention
+      
+      doc.setFont('helvetica', 'bold')
+      doc.text(`${index + 1}. ${typeMention}`, 20, y)
+      y += 4
+      doc.setFont('helvetica', 'normal')
+      doc.text(mention.texte_mention || '', 25, y, { maxWidth: 160 })
+      y += 4
+      doc.text(`Le ${formatDate(mention.date_mention)}`, 25, y)
+      y += 6
+    })
+  }
+  
+  // QR Code et signature en bas
+  const pageHeight = doc.internal.pageSize.height
   const qrCodeDataUrl = await generateVerificationQRCode(naissance.numero_acte)
   
-  // En-tête
-  addHeader(doc, mairie, 'Extrait d\'Acte de Naissance')
-  
-  // Numéro d'acte
-  doc.setFontSize(11)
-  doc.setFont('helvetica', 'bold')
-  doc.text(`N° ${naissance.numero_acte}/${naissance.annee}`, 105, 70, { align: 'center' })
-  
-  // Contenu
-  doc.setFontSize(11)
-  doc.setFont('helvetica', 'normal')
-  let y = 85
-  
-  doc.text('Le présent extrait certifie que :', 20, y)
-  y += 10
-  
-  // Nom et prénom
-  doc.setFont('helvetica', 'bold')
-  doc.text(`${naissance.prenom_enfant} ${naissance.nom_enfant}`, 20, y)
-  doc.setFont('helvetica', 'normal')
-  y += 8
-  
-  // Sexe
-  doc.text(`Sexe : ${naissance.sexe}`, 20, y)
-  y += 8
-  
-  // Date de naissance
-  doc.text(`Est né(e) le ${formatDate(naissance.date_naissance)}`, 20, y)
-  if (naissance.heure_naissance) {
-    doc.text(` à ${formatTime(naissance.heure_naissance)}`, 90, y)
-  }
-  y += 8
-  
-  // Lieu de naissance
-  doc.text(`À ${naissance.lieu_naissance}`, 20, y)
-  y += 12
-  
-  // Parents
-  doc.text('Fils/Fille de :', 20, y)
-  y += 8
-  
-  if (naissance.nom_pere || naissance.prenom_pere) {
-    doc.text(`Père : ${naissance.prenom_pere || ''} ${naissance.nom_pere || ''}`, 30, y)
-    y += 8
+  if (qrCodeDataUrl) {
+    doc.addImage(qrCodeDataUrl, 'PNG', 25, pageHeight - 50, 25, 25)
   }
   
-  if (naissance.nom_mere || naissance.prenom_mere) {
-    doc.text(`Mère : ${naissance.prenom_mere || ''} ${naissance.nom_mere || ''}`, 30, y)
-    y += 8
-  }
-  
-  // Mention légale
-  y += 10
   doc.setFontSize(9)
-  doc.setFont('helvetica', 'italic')
-  doc.text('Le présent extrait est délivré pour servir et valoir ce que de droit.', 20, y)
-  
-  // Pied de page
-  addFooter(doc, naissance.numero_acte, naissance.annee, agentNom, qrCodeDataUrl)
+  doc.text(`L'Officier de l'État Civil`, 140, pageHeight - 40)
+  doc.setFont('helvetica', 'bold')
+  doc.text(agentNom, 140, pageHeight - 30)
   
   return doc.output('blob')
 }
@@ -342,8 +453,64 @@ export const generateActeMariage = async (
   y += 8
   doc.text(`À ${mariage.lieu_mariage}`, 20, y)
   
+  // Témoins
+  if (mariage.temoin1_nom || mariage.temoin2_nom) {
+    y += 12
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.text('TÉMOINS', 20, y)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    y += 8
+    
+    // Témoin 1
+    if (mariage.temoin1_nom) {
+      doc.setFont('helvetica', 'bold')
+      doc.text('Témoin 1 :', 20, y)
+      doc.setFont('helvetica', 'normal')
+      y += 6
+      doc.text(`${mariage.temoin1_prenom || ''} ${mariage.temoin1_nom}`, 30, y)
+      y += 5
+      if (mariage.temoin1_numero_cni) {
+        doc.text(`N° CNI : ${mariage.temoin1_numero_cni}`, 30, y)
+        y += 5
+      }
+      if (mariage.temoin1_nationalite) {
+        doc.text(`Nationalité : ${mariage.temoin1_nationalite}`, 30, y)
+        y += 5
+      }
+      if (mariage.temoin1_profession) {
+        doc.text(`Profession : ${mariage.temoin1_profession}`, 30, y)
+        y += 5
+      }
+      y += 3
+    }
+    
+    // Témoin 2
+    if (mariage.temoin2_nom) {
+      doc.setFont('helvetica', 'bold')
+      doc.text('Témoin 2 :', 20, y)
+      doc.setFont('helvetica', 'normal')
+      y += 6
+      doc.text(`${mariage.temoin2_prenom || ''} ${mariage.temoin2_nom}`, 30, y)
+      y += 5
+      if (mariage.temoin2_numero_cni) {
+        doc.text(`N° CNI : ${mariage.temoin2_numero_cni}`, 30, y)
+        y += 5
+      }
+      if (mariage.temoin2_nationalite) {
+        doc.text(`Nationalité : ${mariage.temoin2_nationalite}`, 30, y)
+        y += 5
+      }
+      if (mariage.temoin2_profession) {
+        doc.text(`Profession : ${mariage.temoin2_profession}`, 30, y)
+        y += 5
+      }
+    }
+  }
+  
   // Mention légale
-  y += 15
+  y += 10
   doc.setFontSize(9)
   doc.setFont('helvetica', 'italic')
   doc.text('Le présent extrait est délivré pour servir et valoir ce que de droit.', 20, y)

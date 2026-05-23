@@ -9,7 +9,13 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { FileUpload } from '@/components/ui/FileUpload'
+import { GeoSelector } from '@/components/GeoSelector'
+import { GeoBreadcrumb } from '@/components/GeoBreadcrumb'
+import { ModalAvertissementsLegaux } from '@/components/ModalAvertissementsLegaux'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import type { GeoSelection } from '@/types/geo'
+import { formatGeoSelection } from '@/lib/geoHelpers'
+import { MapPin, AlertCircle } from 'lucide-react'
 
 export default function DemandeExtraitPage() {
   const router = useRouter()
@@ -18,7 +24,14 @@ export default function DemandeExtraitPage() {
   const [userData, setUserData] = useState<any>(null)
   const [documentUrl, setDocumentUrl] = useState<string | null>(null)
   const [documentName, setDocumentName] = useState<string | null>(null)
+  const [showModalAvertissements, setShowModalAvertissements] = useState(false)
   const [mairies, setMairies] = useState<any[]>([])
+  const [communes, setCommunes] = useState<any[]>([])
+  const [sousPrefectures, setSousPrefectures] = useState<any[]>([])
+  const [localisation, setLocalisation] = useState<GeoSelection>({})
+  const [mairieCompetente, setMairieCompetente] = useState<any>(null)
+  const [loadingMairie, setLoadingMairie] = useState(false)
+  const [villagesResults, setVillagesResults] = useState<any[]>([])
   
   const [typeActe, setTypeActe] = useState<'naissance' | 'mariage' | 'deces'>('naissance')
   
@@ -32,6 +45,8 @@ export default function DemandeExtraitPage() {
     nom_mere: '',
     telephone: '',
     mairie_id: '',
+    selection_mode: 'mairie', // 'mairie', 'sous_prefecture', 'village'
+    village_search: '',
     // Pour mariage
     nom_conjoint: '',
     prenom_conjoint: '',
@@ -78,7 +93,40 @@ export default function DemandeExtraitPage() {
       if (mairiesData) {
         setMairies(mairiesData.map(m => ({
           value: m.id,
-          label: `${m.nom_mairie} - ${m.ville}`
+          label: `${m.nom_mairie} - ${m.ville || ''}`,
+          type: 'mairie'
+        })))
+      }
+
+      // Récupérer la liste des communes
+      const { data: communesData } = await supabase
+        .from('communes')
+        .select('id, nom, sous_prefectures(nom)')
+        .order('nom')
+
+      console.log('Communes chargées:', communesData)
+
+      if (communesData) {
+        setCommunes(communesData.map(c => ({
+          value: c.id,
+          label: `Commune de ${c.nom}`,
+          type: 'commune'
+        })))
+      }
+
+      // Récupérer la liste des sous-préfectures
+      const { data: sousPrefData } = await supabase
+        .from('sous_prefectures')
+        .select('id, nom, departements(nom)')
+        .order('nom')
+
+      console.log('Sous-préfectures chargées:', sousPrefData)
+
+      if (sousPrefData) {
+        setSousPrefectures(sousPrefData.map(sp => ({
+          value: sp.id,
+          label: `Sous-préfecture de ${sp.nom}`,
+          type: 'sous_prefecture'
         })))
       }
     }
@@ -86,8 +134,120 @@ export default function DemandeExtraitPage() {
     fetchData()
   }, [])
 
+  // Trouver la mairie compétente quand la localisation change
+  useEffect(() => {
+    const findMairieCompetente = async () => {
+      if (!localisation.village_id && !localisation.commune_id) {
+        setMairieCompetente(null)
+        return
+      }
+
+      setLoadingMairie(true)
+      try {
+        // Si un village est sélectionné, utiliser la fonction SQL
+        if (localisation.village_id) {
+          const { data, error } = await supabase
+            .rpc('get_mairie_competente', { village_uuid: localisation.village_id })
+
+          if (error) throw error
+
+          if (data && data.length > 0) {
+            setMairieCompetente(data[0])
+            // Mettre à jour le formData avec l'ID de la mairie
+            setFormData(prev => ({ ...prev, mairie_id: data[0].mairie_id }))
+          }
+        } 
+        // Sinon chercher par commune
+        else if (localisation.commune_id) {
+          const { data, error } = await supabase
+            .from('mairies')
+            .select('id, nom_mairie')
+            .eq('commune_id', localisation.commune_id)
+            .single()
+
+          if (data) {
+            setMairieCompetente({
+              mairie_id: data.id,
+              mairie_nom: data.nom_mairie,
+              type_rattachement: 'communale'
+            })
+            setFormData(prev => ({ ...prev, mairie_id: data.id }))
+          } else if (localisation.sous_prefecture_id) {
+            // Essayer par sous-préfecture
+            const { data: spData } = await supabase
+              .from('mairies')
+              .select('id, nom_mairie')
+              .eq('sous_prefecture_id', localisation.sous_prefecture_id)
+              .eq('gere_villages', true)
+              .single()
+
+            if (spData) {
+              setMairieCompetente({
+                mairie_id: spData.id,
+                mairie_nom: spData.nom_mairie,
+                type_rattachement: 'sous_prefectorale'
+              })
+              setFormData(prev => ({ ...prev, mairie_id: spData.id }))
+            }
+          }
+        }
+      } catch (err: any) {
+        console.error('Erreur mairie:', err)
+      } finally {
+        setLoadingMairie(false)
+      }
+    }
+
+    findMairieCompetente()
+  }, [localisation])
+
+  // Recherche de villages quand l'utilisateur tape
+  useEffect(() => {
+    const searchVillages = async () => {
+      if (!formData.village_search || formData.village_search.length < 2) {
+        setVillagesResults([])
+        return
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('villages')
+          .select(`
+            id,
+            nom,
+            commune_id,
+            sous_prefecture_id,
+            communes(nom),
+            sous_prefectures(nom)
+          `)
+          .ilike('nom', `%${formData.village_search}%`)
+          .limit(10)
+
+        if (error) {
+          console.error('Erreur requête villages:', error)
+          setVillagesResults([])
+          return
+        }
+
+        console.log('Villages trouvés:', data)
+        setVillagesResults(data || [])
+      } catch (err) {
+        console.error('Erreur recherche villages:', err)
+        setVillagesResults([])
+      }
+    }
+
+    const timer = setTimeout(searchVillages, 300)
+    return () => clearTimeout(timer)
+  }, [formData.village_search])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Ouvrir la modale d'avertissements au lieu de soumettre directement
+    setShowModalAvertissements(true)
+  }
+
+  const handleAcceptConditions = async () => {
     setLoading(true)
 
     try {
@@ -109,6 +269,8 @@ export default function DemandeExtraitPage() {
         document_url: documentUrl,
         document_name: documentName,
         statut: 'en_attente',
+        conditions_acceptees: true,
+        date_acceptation_conditions: new Date().toISOString(),
       }
 
       // Ajouter les champs spécifiques selon le type
@@ -137,12 +299,17 @@ export default function DemandeExtraitPage() {
 
       if (error) throw error
 
-      // Afficher un message de succès
-      alert('✅ Demande soumise avec succès!')
+      // Fermer la modale
+      setShowModalAvertissements(false)
+
+      // Afficher un message de succès avec le code de suivi
+      const codeSuivi = data?.[0]?.code_suivi || 'N/A'
+      alert(`✅ Demande soumise avec succès !\n\n📋 Code de suivi : ${codeSuivi}\n\nConservez ce code précieusement. Vous en aurez besoin pour retirer votre document.`)
       router.push('/mes-demandes')
     } catch (error: any) {
       console.error('Erreur:', error)
       alert('❌ Erreur lors de la soumission : ' + error.message)
+      setShowModalAvertissements(false)
     } finally {
       setLoading(false)
     }
@@ -357,13 +524,182 @@ export default function DemandeExtraitPage() {
                   required
                 />
 
-                <Select
-                  label="Mairie"
-                  options={mairies}
-                  value={formData.mairie_id}
-                  onChange={(e) => setFormData({ ...formData, mairie_id: e.target.value })}
-                  required
-                />
+                {/* Sélection SIMPLIFIÉE de la localisation */}
+                <div className="border-2 border-orange-100 rounded-lg p-4 bg-orange-50/30">
+                  <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <MapPin size={20} className="text-orange-500" />
+                    Où se trouve votre acte ?
+                  </h3>
+
+                  {/* Choix du mode de sélection */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Comment souhaitez-vous sélectionner ?
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, selection_mode: 'mairie' })}
+                        className={`p-3 rounded-lg border-2 text-sm font-medium transition ${
+                          formData.selection_mode === 'mairie'
+                            ? 'border-orange-500 bg-orange-50 text-orange-900'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-orange-200'
+                        }`}
+                      >
+                        🏢 Mairie
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, selection_mode: 'sous_prefecture' })}
+                        className={`p-3 rounded-lg border-2 text-sm font-medium transition ${
+                          formData.selection_mode === 'sous_prefecture'
+                            ? 'border-orange-500 bg-orange-50 text-orange-900'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-orange-200'
+                        }`}
+                      >
+                        🏘️ Sous-préfecture
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, selection_mode: 'village' })}
+                        className={`p-3 rounded-lg border-2 text-sm font-medium transition ${
+                          formData.selection_mode === 'village'
+                            ? 'border-orange-500 bg-orange-50 text-orange-900'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-orange-200'
+                        }`}
+                      >
+                        🏡 Village
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Si Mairie sélectionnée */}
+                  {formData.selection_mode === 'mairie' && (
+                    <div>
+                      <Select
+                        label="Sélectionnez votre mairie"
+                        options={mairies}
+                        value={formData.mairie_id}
+                        onChange={(e) => setFormData({ ...formData, mairie_id: e.target.value })}
+                        required
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {mairies.length} mairie(s) disponible(s)
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Si Sous-préfecture sélectionnée */}
+                  {formData.selection_mode === 'sous_prefecture' && (
+                    <div>
+                      <Select
+                        label="Sélectionnez votre sous-préfecture"
+                        options={sousPrefectures}
+                        value={formData.mairie_id}
+                        onChange={(e) => setFormData({ ...formData, mairie_id: e.target.value })}
+                        required
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {sousPrefectures.length} sous-préfecture(s) disponible(s)
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Si Village sélectionné */}
+                  {formData.selection_mode === 'village' && (
+                    <div>
+                      <Input
+                        label="Tapez le nom de votre village"
+                        type="text"
+                        placeholder="Ex: Cocody-Riviera"
+                        value={formData.village_search}
+                        onChange={(e) => setFormData({ ...formData, village_search: e.target.value })}
+                      />
+                      
+                      {/* Résultats de recherche */}
+                      {formData.village_search && formData.village_search.length >= 2 && (
+                        <div className="mt-2 max-h-60 overflow-y-auto border border-gray-200 rounded-lg bg-white shadow-sm">
+                          {loadingMairie ? (
+                            <div className="p-4 text-center">
+                              <p className="text-sm text-gray-500">🔍 Recherche en cours...</p>
+                            </div>
+                          ) : villagesResults.length > 0 ? (
+                            villagesResults.map((village) => (
+                              <button
+                                key={village.id}
+                                type="button"
+                                onClick={async () => {
+                                  console.log('Village cliqué:', village)
+                                  setLoadingMairie(true)
+                                  
+                                  try {
+                                    // Trouver la mairie/SP pour ce village
+                                    const { data, error } = await supabase
+                                      .rpc('get_mairie_competente', { village_uuid: village.id })
+                                    
+                                    console.log('Résultat get_mairie_competente:', data, error)
+                                    
+                                    if (error) {
+                                      console.error('Erreur get_mairie_competente:', error)
+                                      alert('Erreur lors de la recherche de la mairie. Vérifiez que la fonction SQL existe.')
+                                      setLoadingMairie(false)
+                                      return
+                                    }
+                                    
+                                    if (data && data.length > 0) {
+                                      console.log('Mairie trouvée:', data[0])
+                                      setMairieCompetente(data[0])
+                                      setFormData(prev => ({ 
+                                        ...prev, 
+                                        mairie_id: data[0].mairie_id,
+                                        village_search: village.nom
+                                      }))
+                                      setVillagesResults([]) // Fermer la liste
+                                    } else {
+                                      alert('Aucune mairie trouvée pour ce village.')
+                                    }
+                                  } catch (err) {
+                                    console.error('Erreur:', err)
+                                    alert('Erreur lors de la sélection du village.')
+                                  } finally {
+                                    setLoadingMairie(false)
+                                  }
+                                }}
+                                className="w-full text-left p-3 hover:bg-orange-50 border-b border-gray-100 transition cursor-pointer"
+                              >
+                                <p className="font-medium text-gray-900">🏡 {village.nom}</p>
+                                <p className="text-xs text-gray-600 mt-1">
+                                  Commune: {village.communes?.nom || 'N/A'} • SP: {village.sous_prefectures?.nom || 'N/A'}
+                                </p>
+                              </button>
+                            ))
+                          ) : (
+                            <p className="p-3 text-sm text-gray-500 text-center">
+                              Aucun village trouvé
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Mairie/SP trouvée */}
+                  {mairieCompetente && (
+                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <MapPin className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
+                        <div>
+                          <p className="text-xs text-green-700 mb-1">
+                            {mairieCompetente.type_rattachement === 'sous_prefecture' ? 'Sous-préfecture responsable :' : 'Mairie responsable :'}
+                          </p>
+                          <p className="font-semibold text-green-900">
+                            {mairieCompetente.mairie_nom}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Composant Upload de Document */}
                 <div>
@@ -405,7 +741,7 @@ export default function DemandeExtraitPage() {
                   <Button
                     type="submit"
                     variant="primary"
-                    disabled={loading || !documentUrl}
+                    disabled={loading || !documentUrl || !formData.mairie_id}
                     className="flex-1"
                   >
                     {loading ? 'Soumission en cours...' : 'Soumettre la Demande'}
@@ -425,6 +761,14 @@ export default function DemandeExtraitPage() {
           </div>
         </main>
       </div>
+
+      {/* Modale d'avertissements légaux */}
+      <ModalAvertissementsLegaux
+        isOpen={showModalAvertissements}
+        onClose={() => setShowModalAvertissements(false)}
+        onAccept={handleAcceptConditions}
+        loading={loading}
+      />
     </div>
   )
 }
