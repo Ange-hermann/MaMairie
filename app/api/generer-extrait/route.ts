@@ -2,10 +2,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { generateExtraitPDF } from '@/lib/pdfGenerator'
+import { logAgent } from '@/lib/auditHelpers'
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
+    
+    // Récupérer l'agent connecté
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+    }
+
+    const { data: agent } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', user.id)
+      .single()
     const { demandeId } = await request.json()
 
     if (!demandeId) {
@@ -96,6 +109,29 @@ export async function POST(request: NextRequest) {
         statut: 'approuvee'
       })
       .eq('id', demandeId)
+
+    // ✅ Logger la génération du PDF
+    await logAgent(
+      'PDF_GENERE',
+      {
+        id: agent.id,
+        email: agent.email,
+        nom: `${agent.prenom} ${agent.nom}`
+      },
+      {
+        type: `extrait_${demande.type_acte}`,
+        id: demandeId,
+        reference: demande.numero_acte
+      },
+      undefined,
+      {
+        type_acte: demande.type_acte,
+        numero_acte: demande.numero_acte,
+        pdf_url: publicUrl,
+        agent_id: agent.id
+      },
+      request
+    )
 
     return NextResponse.json({
       success: true,

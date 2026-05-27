@@ -10,6 +10,7 @@ import { FileText, Search, Eye, Clock, CheckCircle, XCircle, AlertTriangle } fro
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
 import { getTypeMentionLabel } from '@/lib/generateCodeMention'
+import { logAgent } from '@/lib/auditHelpers'
 
 export default function AvisMentionsAgentPageSimple() {
   const router = useRouter()
@@ -82,6 +83,24 @@ export default function AvisMentionsAgentPageSimple() {
 
       if (error) throw error
 
+      // ✅ Logger l'approbation de mention
+      await logAgent(
+        'MENTION_APPROUVEE',
+        {
+          id: userData.id,
+          email: userData.email,
+          nom: `${userData.prenom} ${userData.nom}`
+        },
+        {
+          type: 'avis_mention',
+          id: selectedAvis.id,
+          reference: selectedAvis.code_mention
+        },
+        { statut: selectedAvis.statut },
+        { statut: 'approuvee', agent_id: userData.id },
+        undefined // request
+      )
+
       alert('✅ Avis de mention validé')
       setShowModal(false)
       setSelectedAvis(null)
@@ -106,6 +125,24 @@ export default function AvisMentionsAgentPageSimple() {
         .eq('id', selectedAvis.id)
 
       if (error) throw error
+
+      // ❌ Logger le rejet de mention
+      await logAgent(
+        'MENTION_REJETEE',
+        {
+          id: userData.id,
+          email: userData.email,
+          nom: `${userData.prenom} ${userData.nom}`
+        },
+        {
+          type: 'avis_mention',
+          id: selectedAvis.id,
+          reference: selectedAvis.code_mention
+        },
+        { statut: selectedAvis.statut },
+        { statut: 'rejetee', motif_rejet: motifRejet, agent_id: userData.id },
+        undefined // request
+      )
 
       alert('✅ Avis de mention rejeté')
       setShowRejetModal(false)

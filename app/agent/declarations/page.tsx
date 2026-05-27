@@ -12,6 +12,7 @@ import { telechargerPdfActeNaissance } from '@/lib/genererPdfActeNaissance'
 import { FileText, Search, Eye, CheckCircle, XCircle, Clock, Baby } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
+import { logAgent } from '@/lib/auditHelpers'
 
 export default function DeclarationsAgentPage() {
   const router = useRouter()
@@ -119,6 +120,24 @@ export default function DeclarationsAgentPage() {
 
       if (error) throw error
 
+      // ✅ Logger la validation
+      await logAgent(
+        'DEMANDE_APPROUVEE',
+        {
+          id: userData.id,
+          email: userData.email,
+          nom: `${userData.prenom} ${userData.nom}`
+        },
+        {
+          type: 'declaration_naissance',
+          id: selectedDeclaration.id,
+          reference: selectedDeclaration.code_suivi
+        },
+        { statut: selectedDeclaration.statut },
+        { statut: 'validee', agent_id: userData.id },
+        undefined // request (pas disponible côté client)
+      )
+
       alert('✅ Déclaration validée avec succès')
       setShowModal(false)
       fetchData()
@@ -144,6 +163,24 @@ export default function DeclarationsAgentPage() {
         .eq('id', selectedDeclaration.id)
 
       if (error) throw error
+
+      // ❌ Logger le rejet
+      await logAgent(
+        'DEMANDE_REJETEE',
+        {
+          id: userData.id,
+          email: userData.email,
+          nom: `${userData.prenom} ${userData.nom}`
+        },
+        {
+          type: 'declaration_naissance',
+          id: selectedDeclaration.id,
+          reference: selectedDeclaration.code_suivi
+        },
+        { statut: selectedDeclaration.statut },
+        { statut: 'rejetee', motif_rejet: motifRejet, agent_id: userData.id },
+        undefined // request (pas disponible côté client)
+      )
 
       alert('✅ Déclaration rejetée')
       setShowRejetModal(false)

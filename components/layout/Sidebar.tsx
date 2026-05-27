@@ -18,7 +18,8 @@ import {
   Users,
   AlertTriangle,
   Menu,
-  X
+  X,
+  Shield
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -48,6 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role }) => {
     { href: '/agent/demandes', label: 'Demandes Extraits', icon: FileText },
     { href: '/agent/declarations', label: 'Déclarations Naissance', icon: Baby },
     { href: '/agent/avis-mentions', label: 'Avis de Mention', icon: AlertTriangle },
+    { href: '/agent/audit', label: 'Mon Journal d\'Audit', icon: Shield },
   ]
 
   const etatCivilLinks = [
@@ -76,6 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role }) => {
     { href: '/ministere/statistiques', label: 'Statistiques Nationales', icon: BarChart3 },
     { href: '/ministere/alertes', label: 'Alertes & Anomalies', icon: FileText },
     { href: '/ministere/verification', label: 'Vérification Actes', icon: FileCheck },
+    { href: '/ministere/audit', label: 'Journal d\'Audit National', icon: Shield },
   ]
   
   const links = role === 'citoyen' ? citizenLinks : role === 'admin' ? adminLinks : role === 'ministere' ? ministereLinks : []

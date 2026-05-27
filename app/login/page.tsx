@@ -25,37 +25,28 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      // 1. Connexion avec Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
+      // Appel de l'API route qui gère l'audit
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
       })
 
-      if (authError) {
-        toast.error('Email ou mot de passe incorrect')
+      const data = await response.json()
+
+      if (!response.ok) {
+        toast.error(data.error || 'Erreur de connexion')
         return
       }
 
-      if (!authData.user) {
-        toast.error('Erreur de connexion')
-        return
-      }
-
-      // 2. Récupérer le profil utilisateur pour connaître son rôle
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('role, nom, prenom')
-        .eq('id', authData.user.id)
-        .single()
-
-      if (userError || !userData) {
-        toast.error('Profil utilisateur introuvable')
-        return
-      }
+      const { userData } = data
 
       toast.success(`Bienvenue ${userData.prenom} ${userData.nom} !`)
 
-      // 3. Redirection basée sur le rôle
+      // Redirection basée sur le rôle
       if (userData.role === 'citoyen') {
         router.push('/dashboard-citoyen')
       } else if (userData.role === 'agent') {
