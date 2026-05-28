@@ -292,9 +292,6 @@ export default function DemandeExtraitPage() {
 
       if (error) throw error
 
-      // Fermer la modale
-      setShowModalAvertissements(false)
-
       // Afficher un message de succès avec le code de suivi
       const codeSuivi = data?.[0]?.code_suivi || 'N/A'
       alert(`✅ Demande soumise avec succès !\n\n📋 Code de suivi : ${codeSuivi}\n\nConservez ce code précieusement. Vous en aurez besoin pour retirer votre document.`)
@@ -302,7 +299,6 @@ export default function DemandeExtraitPage() {
     } catch (error: any) {
       console.error('Erreur:', error)
       alert('❌ Erreur lors de la soumission : ' + error.message)
-      setShowModalAvertissements(false)
     } finally {
       setLoading(false)
     }
