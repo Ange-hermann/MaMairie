@@ -182,14 +182,9 @@ export async function genererPdfActeNaissance(data: ActeNaissanceData): Promise<
   doc.line(margin, signatureY + 8, margin + 40, signatureY + 8)
 
   // Générer QR Code (en bas à droite, au même niveau que la signature)
-  const qrData = JSON.stringify({
-    type: 'naissance',
-    numero_acte: data.numero_acte,
-    annee: new Date().getFullYear()
-  })
-
+  // QR Code contient seulement le numéro d'acte
   try {
-    const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
+    const qrCodeDataUrl = await QRCode.toDataURL(data.numero_acte, {
       width: 300,
       margin: 1,
       color: {

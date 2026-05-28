@@ -211,18 +211,9 @@ export async function genererPdfActeMariage(data: ActeMariageData): Promise<Blob
   y += 10
   doc.text('L\'Officier de l\'État Civil', pageWidth / 2, y, { align: 'center' })
 
-  // Générer QR Code (en bas à droite)
-  const qrData = JSON.stringify({
-    type: 'acte_mariage',
-    numero: data.numero_acte,
-    epoux: `${data.nom_epoux} ${data.prenom_epoux}`,
-    epouse: `${data.nom_epouse} ${data.prenom_epouse}`,
-    date_mariage: data.date_mariage,
-    verification_url: `https://mamairie.ci/verifier/${data.numero_acte}`
-  })
-
+  // Générer QR Code (contient seulement le numéro d'acte)
   try {
-    const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
+    const qrCodeDataUrl = await QRCode.toDataURL(data.numero_acte, {
       width: 300,
       margin: 1,
       color: {
