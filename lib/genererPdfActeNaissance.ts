@@ -159,25 +159,33 @@ export async function genererPdfActeNaissance(data: ActeNaissanceData): Promise<
   y = drawTableLine('Domicile', data.domicile_mere, y)
   y = drawTableLine('Nationalité', data.nationalite_mere, y)
 
-  // Texte de clôture (si espace disponible)
-  if (y < 240) {
-    y += 10
-    doc.setFontSize(8)
-    doc.setFont('helvetica', 'normal')
-    const clotureText = 'Dont acte rédigé par nous, Officier de l\'État Civil soussigné, lu et interprété au comparant, qui a signé avec nous le présent acte.'
-    const splitCloture = doc.splitTextToSize(clotureText, rightMargin - margin)
-    doc.text(splitCloture, margin, y)
-    y += splitCloture.length * 4
-  }
+  // Texte de clôture
+  y += 10
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'normal')
+  const clotureText = 'Dont acte rédigé par nous, Officier de l\'État Civil soussigné, lu et interprété au comparant, qui a signé avec nous le présent acte.'
+  const splitCloture = doc.splitTextToSize(clotureText, rightMargin - margin)
+  doc.text(splitCloture, margin, y)
+  y += splitCloture.length * 4 + 15
 
-  // Générer QR Code (en bas à droite, remplace le cachet)
+  // Signature de l'Officier d'État Civil (en bas à gauche)
+  const signatureY = pageHeight - 45
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'bold')
+  doc.text('L\'Officier de l\'État Civil', margin + 20, signatureY, { align: 'center' })
+  
+  doc.setFont('helvetica', 'normal')
+  doc.text(`${data.officier.prenom} ${data.officier.nom}`, margin + 20, signatureY + 15, { align: 'center' })
+  
+  // Ligne pour signature manuscrite
+  doc.setLineWidth(0.3)
+  doc.line(margin, signatureY + 8, margin + 40, signatureY + 8)
+
+  // Générer QR Code (en bas à droite, au même niveau que la signature)
   const qrData = JSON.stringify({
-    type: 'acte_naissance',
-    numero: data.numero_acte,
-    nom: data.nom,
-    prenom: data.prenom,
-    date_naissance: data.date_naissance,
-    verification_url: `https://mamairie.ci/verifier/${data.numero_acte}`
+    type: 'naissance',
+    numero_acte: data.numero_acte,
+    annee: new Date().getFullYear()
   })
 
   try {
@@ -190,10 +198,10 @@ export async function genererPdfActeNaissance(data: ActeNaissanceData): Promise<
       }
     })
 
-    // Ajouter QR Code en bas à droite
-    const qrSize = 35
+    // Ajouter QR Code en bas à droite (au même niveau que la signature)
+    const qrSize = 28
     const qrX = rightMargin - qrSize - 10
-    const qrY = pageHeight - qrSize - 20
+    const qrY = signatureY - 5  // Au même niveau que la signature
     
     doc.addImage(qrCodeDataUrl, 'PNG', qrX, qrY, qrSize, qrSize)
 
@@ -209,7 +217,7 @@ export async function genererPdfActeNaissance(data: ActeNaissanceData): Promise<
   // Mention légale en bas
   doc.setFontSize(7)
   doc.setFont('helvetica', 'italic')
-  doc.text(`(Cachet de la Mairie de ${data.mairie.commune})`, pageWidth / 2, pageHeight - 15, { align: 'center' })
+  doc.text(`Cachet de la Mairie de ${data.mairie.commune}`, pageWidth / 2, pageHeight - 15, { align: 'center' })
   doc.text('Ce document est délivré pour servir et valoir ce que de droit.', pageWidth / 2, pageHeight - 10, { align: 'center' })
 
   // Retourner le PDF en tant que Blob

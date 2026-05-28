@@ -100,29 +100,36 @@ export default function DemandesAgentPage() {
 
   const handleUpdateStatut = async (demandeId: string, newStatut: string) => {
     try {
-      // Si on approuve, générer le PDF avec QR Code
+      // Utiliser l'API pour enregistrer l'audit
+      const response = await fetch('/api/demandes/update-statut', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          demandeId, 
+          nouveauStatut: newStatut 
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erreur mise à jour statut')
+      }
+
+      // Si approuvée, générer aussi le PDF
       if (newStatut === 'approuvee') {
-        const response = await fetch('/api/generer-extrait', {
+        const pdfResponse = await fetch('/api/generer-extrait', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ demandeId })
         })
 
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || 'Erreur génération PDF')
+        if (pdfResponse.ok) {
+          const { pdfUrl } = await pdfResponse.json()
+          alert(`✅ Demande approuvée ! PDF généré avec QR Code.\nURL: ${pdfUrl}`)
+        } else {
+          alert('✅ Demande approuvée ! (PDF en cours de génération...)')
         }
-
-        const { pdfUrl } = await response.json()
-        alert(`✅ Demande approuvée ! PDF généré avec QR Code.\nURL: ${pdfUrl}`)
       } else {
-        // Pour les autres statuts, mise à jour simple
-        const { error } = await supabase
-          .from('requests')
-          .update({ statut: newStatut })
-          .eq('id', demandeId)
-
-        if (error) throw error
         alert(`✅ Statut mis à jour: ${getStatutLabel(newStatut)}`)
       }
       
@@ -144,27 +151,21 @@ export default function DemandesAgentPage() {
     }
 
     try {
-      const { error } = await supabase
-        .from('requests')
-        .update({ 
-          statut: 'rejetee',
-          motif_rejet: motifFinal,
-          date_rejet: new Date().toISOString()
+      // Utiliser l'API pour enregistrer l'audit
+      const response = await fetch('/api/demandes/update-statut', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          demandeId: selectedDemande.id,
+          nouveauStatut: 'rejetee',
+          motifRejet: motifFinal
         })
-        .eq('id', selectedDemande.id)
+      })
 
-      if (error) throw error
-
-      // Créer une notification pour le citoyen
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: selectedDemande.user_id,
-          titre: 'Demande rejetée',
-          message: `Votre demande d'extrait de ${selectedDemande.type_acte} a été rejetée. Motif: ${motifFinal}`,
-          type: 'demande_rejetee',
-          lue: false
-        })
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erreur rejet demande')
+      }
       
       alert('✅ Demande rejetée avec succès')
       setShowRejetModal(false)
@@ -234,19 +235,21 @@ export default function DemandesAgentPage() {
   const verifierCoherence = (demande: any, acte: any) => {
     // Vérifier la cohérence selon le type d'acte
     if (demande.type_acte === 'naissance') {
-      return (
-        demande.nom?.toLowerCase() === acte.nom_enfant?.toLowerCase() &&
-        demande.prenom?.toLowerCase() === acte.prenom_enfant?.toLowerCase()
-      )
+      const nomMatch = demande.nom?.toLowerCase().trim() === acte.nom_enfant?.toLowerCase().trim()
+      const prenomMatch = demande.prenom?.toLowerCase().trim() === acte.prenom_enfant?.toLowerCase().trim()
+      const dateMatch = demande.date_naissance === acte.date_naissance
+      
+      // Au minimum, nom et prénom doivent correspondre
+      return nomMatch && prenomMatch && dateMatch
     } else if (demande.type_acte === 'mariage') {
       return (
-        demande.nom?.toLowerCase() === acte.nom_epoux?.toLowerCase() ||
-        demande.nom?.toLowerCase() === acte.nom_epouse?.toLowerCase()
+        demande.nom?.toLowerCase().trim() === acte.nom_epoux?.toLowerCase().trim() ||
+        demande.nom?.toLowerCase().trim() === acte.nom_epouse?.toLowerCase().trim()
       )
     } else if (demande.type_acte === 'deces') {
       return (
-        demande.nom?.toLowerCase() === acte.nom_defunt?.toLowerCase() &&
-        demande.prenom?.toLowerCase() === acte.prenom_defunt?.toLowerCase()
+        demande.nom?.toLowerCase().trim() === acte.nom_defunt?.toLowerCase().trim() &&
+        demande.prenom?.toLowerCase().trim() === acte.prenom_defunt?.toLowerCase().trim()
       )
     }
     return true
@@ -645,6 +648,17 @@ export default function DemandesAgentPage() {
                         </p>
                       </div>
                     )}
+                    
+                    {verificationResult.valide && !verificationResult.coherent && (
+                      <div className="mt-3 pt-3 border-t border-yellow-300 bg-yellow-50 p-3 rounded">
+                        <p className="text-sm text-yellow-800 font-medium">
+                          ⚠️ <strong>ATTENTION :</strong> Les informations de la demande ne correspondent pas à l'acte original.
+                        </p>
+                        <p className="text-xs text-yellow-700 mt-1">
+                          Vous ne pouvez pas approuver cette demande. Veuillez la rejeter et demander au citoyen de vérifier ses informations.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -686,10 +700,11 @@ export default function DemandesAgentPage() {
                         variant="success"
                         onClick={() => handleUpdateStatut(selectedDemande.id, 'approuvee')}
                         className="w-full"
-                        disabled={verificationLoading || (verificationResult && !verificationResult.valide)}
+                        disabled={verificationLoading || (verificationResult && (!verificationResult.valide || !verificationResult.coherent))}
                         title={
                           verificationLoading ? 'Vérification en cours...' :
                           (verificationResult && !verificationResult.valide) ? 'Impossible d\'approuver : numéro d\'acte invalide' :
+                          (verificationResult && !verificationResult.coherent) ? 'Impossible d\'approuver : les informations ne correspondent pas' :
                           'Approuver la demande'
                         }
                       >

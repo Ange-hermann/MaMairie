@@ -403,40 +403,60 @@ export default function VerificationActesPage() {
     return `${typeActe}-${acte.numero_acte}-${acte.id}`.replace(/[^a-zA-Z0-9]/g, '')
   }
 
-  const handleQRScan = (qrData: string) => {
-    // Le QR code contient le format: TYPE-NUMERO-ID
-    // Ex: NAIS-001-2024-uuid
+  const handleQRScan = async (qrData: string) => {
+    // Utiliser l'API pour vérifier le QR code (avec audit automatique)
+    setVerifying(true)
+    setResultat(null)
+    setShowQRScanner(false)
+
     try {
-      const parts = qrData.split('-')
-      if (parts.length >= 2) {
-        // Extraire le type et le numéro
-        const typeMap: any = {
-          'NAIS': 'naissance',
-          'MAR': 'mariage',
-          'DEC': 'deces'
-        }
-        
-        const scannedType = typeMap[parts[0]] || 'naissance'
-        const numeroActe = parts.slice(1, -1).join('-') // Tout sauf le premier et dernier élément
-        
-        setTypeActe(scannedType)
-        setSearchValue(numeroActe)
-        setSearchType('numero')
-        
-        // Lancer automatiquement la vérification
-        setTimeout(() => {
-          const form = document.querySelector('form') as HTMLFormElement
-          if (form) {
-            form.requestSubmit()
-          }
-        }, 100)
-      } else {
-        // Si le format ne correspond pas, utiliser directement comme numéro
-        setSearchValue(qrData)
+      const response = await fetch('/api/verification/qr-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qrData })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la vérification')
       }
-    } catch (error) {
-      console.error('Erreur parsing QR:', error)
-      setSearchValue(qrData)
+
+      if (data.valide) {
+        // QR Code valide
+        setResultat({
+          statut: 'valide',
+          message: '✅ Document authentique et enregistré dans la base nationale',
+          details: {
+            ...data.acte,
+            mairies: {
+              nom_mairie: data.acte.mairie,
+              ville: data.acte.ville
+            }
+          }
+        })
+      } else {
+        // QR Code invalide
+        setResultat({
+          statut: 'invalide',
+          message: `❌ ${data.raison}`,
+          details: null
+        })
+      }
+
+      // Rafraîchir les stats et l'historique
+      await fetchStatistiques()
+      await fetchHistorique()
+
+    } catch (error: any) {
+      console.error('Erreur vérification QR:', error)
+      setResultat({
+        statut: 'erreur',
+        message: '⚠️ Erreur lors de la vérification : ' + error.message,
+        details: null
+      })
+    } finally {
+      setVerifying(false)
     }
   }
 

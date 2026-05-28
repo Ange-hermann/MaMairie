@@ -8,8 +8,6 @@ import { Button } from './ui/Button'
 import { ModalAvertissementsLegaux } from './ModalAvertissementsLegaux'
 import { Check, ChevronRight, ChevronLeft, Copy, Download } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { generateCodeSuivi } from '@/lib/generateCodeSuivi'
-import { logCitoyen } from '@/lib/auditHelpers'
 
 interface FormData {
   // Enfant
@@ -127,76 +125,24 @@ export function DeclarationNaissanceForm() {
   const handleSubmit = async () => {
     setLoading(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
-        alert('Vous devez être connecté')
-        setShowModalAvertissements(false)
-        return
+      // Utiliser l'API pour créer la déclaration (avec audit automatique)
+      const response = await fetch('/api/declarations/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erreur lors de la création de la déclaration')
       }
 
-      // Récupérer les infos du citoyen
-      const { data: citoyen } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-
-      // Générer le code de suivi
-      const code = await generateCodeSuivi(formData.mairie_id)
-      
-      // Insérer la déclaration avec acceptation des conditions
-      const { data: declaration, error } = await supabase
-        .from('declarations_naissance')
-        .insert({
-          code_suivi: code,
-          citoyen_id: user.id,
-          conditions_acceptees: true,
-          date_acceptation_conditions: new Date().toISOString(),
-          statut: 'en_attente',
-          ...formData
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-
-      // ✅ Logger la création de la déclaration
-      if (citoyen) {
-        try {
-          await logCitoyen(
-            'DECLARATION_CREEE',
-            {
-              id: citoyen.id,
-              email: citoyen.email,
-              nom: `${citoyen.prenom} ${citoyen.nom}`
-            },
-            {
-              type: 'declaration_naissance',
-              id: declaration?.id,
-              reference: code
-            },
-            undefined,
-            {
-              apres: {
-                mairie_id: formData.mairie_id,
-                nom_enfant: formData.nom_enfant,
-                prenom_enfant: formData.prenom_enfant,
-                date_naissance: formData.date_naissance,
-                sexe: formData.sexe
-              }
-            }
-          )
-        } catch (auditError) {
-          // Log l'erreur mais ne bloque pas le processus
-          console.error('Erreur audit (non bloquante):', auditError)
-        }
-      }
+      const { codeSuivi } = await response.json()
 
       // Fermer la modale
       setShowModalAvertissements(false)
 
-      setCodeSuivi(code)
+      setCodeSuivi(codeSuivi)
       setShowConfirmation(true)
     } catch (error: any) {
       console.error('Erreur:', error)

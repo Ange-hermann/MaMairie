@@ -81,31 +81,31 @@ export async function POST(request: NextRequest) {
     // Uploader le PDF sur Supabase Storage
     const fileName = `extrait-${demande.type_acte}-${demande.numero_acte}-${Date.now()}.pdf`
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('documents')
-      .upload(`extraits/${fileName}`, pdfBuffer, {
+      .from('demandes-documents')
+      .upload(fileName, pdfBuffer, {
         contentType: 'application/pdf',
-        upsert: false
+        upsert: true
       })
 
     if (uploadError) {
       console.error('Erreur upload:', uploadError)
       return NextResponse.json(
-        { error: 'Erreur lors de l\'upload du PDF' },
+        { error: `Erreur lors de l'upload du PDF: ${uploadError.message}` },
         { status: 500 }
       )
     }
 
     // Obtenir l'URL publique
     const { data: { publicUrl } } = supabase.storage
-      .from('documents')
-      .getPublicUrl(`extraits/${fileName}`)
+      .from('demandes-documents')
+      .getPublicUrl(fileName)
 
-    // Mettre à jour la demande avec l'URL du PDF
+    // Mettre à jour la demande avec l'URL du PDF généré
     await supabase
       .from('requests')
       .update({
-        document_url: publicUrl,
-        document_name: fileName,
+        pdf_url: publicUrl,
+        pdf_name: fileName,
         statut: 'approuvee'
       })
       .eq('id', demandeId)
@@ -123,14 +123,15 @@ export async function POST(request: NextRequest) {
         id: demandeId,
         reference: demande.numero_acte
       },
-      undefined,
+      undefined, // avant
+      undefined, // apres
+      request,
       {
         type_acte: demande.type_acte,
         numero_acte: demande.numero_acte,
         pdf_url: publicUrl,
         agent_id: agent.id
-      },
-      request
+      }
     )
 
     return NextResponse.json({

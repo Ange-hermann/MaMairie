@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/Button'
 import { FileUpload } from '@/components/ui/FileUpload'
 import { GeoSelector } from '@/components/GeoSelector'
 import { GeoBreadcrumb } from '@/components/GeoBreadcrumb'
-import { ModalAvertissementsLegaux } from '@/components/ModalAvertissementsLegaux'
+
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import type { GeoSelection } from '@/types/geo'
 import { formatGeoSelection } from '@/lib/geoHelpers'
@@ -24,7 +24,7 @@ export default function DemandeExtraitPage() {
   const [userData, setUserData] = useState<any>(null)
   const [documentUrl, setDocumentUrl] = useState<string | null>(null)
   const [documentName, setDocumentName] = useState<string | null>(null)
-  const [showModalAvertissements, setShowModalAvertissements] = useState(false)
+
   const [mairies, setMairies] = useState<any[]>([])
   const [communes, setCommunes] = useState<any[]>([])
   const [sousPrefectures, setSousPrefectures] = useState<any[]>([])
@@ -243,11 +243,6 @@ export default function DemandeExtraitPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Ouvrir la modale d'avertissements au lieu de soumettre directement
-    setShowModalAvertissements(true)
-  }
-
-  const handleAcceptConditions = async () => {
     setLoading(true)
 
     try {
@@ -762,13 +757,7 @@ export default function DemandeExtraitPage() {
         </main>
       </div>
 
-      {/* Modale d'avertissements légaux */}
-      <ModalAvertissementsLegaux
-        isOpen={showModalAvertissements}
-        onClose={() => setShowModalAvertissements(false)}
-        onAccept={handleAcceptConditions}
-        loading={loading}
-      />
+
     </div>
   )
 }

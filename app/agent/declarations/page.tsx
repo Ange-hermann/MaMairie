@@ -12,7 +12,6 @@ import { telechargerPdfActeNaissance } from '@/lib/genererPdfActeNaissance'
 import { FileText, Search, Eye, CheckCircle, XCircle, Clock, Baby } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
-import { logAgent } from '@/lib/auditHelpers'
 
 export default function DeclarationsAgentPage() {
   const router = useRouter()
@@ -109,34 +108,20 @@ export default function DeclarationsAgentPage() {
     if (!selectedDeclaration) return
 
     try {
-      // Mettre à jour le statut
-      const { error } = await supabase
-        .from('declarations_naissance')
-        .update({ 
-          statut: 'validee',
-          agent_id: userData.id
+      // Utiliser l'API pour valider (avec audit automatique)
+      const response = await fetch('/api/declarations/valider', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          declarationId: selectedDeclaration.id,
+          action: 'valider'
         })
-        .eq('id', selectedDeclaration.id)
+      })
 
-      if (error) throw error
-
-      // ✅ Logger la validation
-      await logAgent(
-        'DEMANDE_APPROUVEE',
-        {
-          id: userData.id,
-          email: userData.email,
-          nom: `${userData.prenom} ${userData.nom}`
-        },
-        {
-          type: 'declaration_naissance',
-          id: selectedDeclaration.id,
-          reference: selectedDeclaration.code_suivi
-        },
-        { statut: selectedDeclaration.statut },
-        { statut: 'validee', agent_id: userData.id },
-        undefined // request (pas disponible côté client)
-      )
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erreur validation')
+      }
 
       alert('✅ Déclaration validée avec succès')
       setShowModal(false)
@@ -153,34 +138,21 @@ export default function DeclarationsAgentPage() {
     }
 
     try {
-      const { error } = await supabase
-        .from('declarations_naissance')
-        .update({ 
-          statut: 'rejetee',
-          motif_rejet: motifRejet,
-          agent_id: userData.id
+      // Utiliser l'API pour rejeter (avec audit automatique)
+      const response = await fetch('/api/declarations/valider', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          declarationId: selectedDeclaration.id,
+          action: 'rejeter',
+          motifRejet: motifRejet
         })
-        .eq('id', selectedDeclaration.id)
+      })
 
-      if (error) throw error
-
-      // ❌ Logger le rejet
-      await logAgent(
-        'DEMANDE_REJETEE',
-        {
-          id: userData.id,
-          email: userData.email,
-          nom: `${userData.prenom} ${userData.nom}`
-        },
-        {
-          type: 'declaration_naissance',
-          id: selectedDeclaration.id,
-          reference: selectedDeclaration.code_suivi
-        },
-        { statut: selectedDeclaration.statut },
-        { statut: 'rejetee', motif_rejet: motifRejet, agent_id: userData.id },
-        undefined // request (pas disponible côté client)
-      )
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erreur rejet')
+      }
 
       alert('✅ Déclaration rejetée')
       setShowRejetModal(false)
@@ -196,19 +168,22 @@ export default function DeclarationsAgentPage() {
     if (!selectedDeclaration) return
 
     try {
-      const { error } = await supabase
-        .from('declarations_naissance')
-        .update({
-          documents_verifies: true,
-          date_verification_documents: new Date().toISOString(),
-          agent_verificateur_id: userData.id,
-          documents_recus: data.documents_recus,
-          observations_agent: data.observations,
-          statut: 'documents_verifies'
+      // Utiliser l'API pour vérifier les documents (avec audit automatique)
+      const response = await fetch('/api/declarations/valider', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          declarationId: selectedDeclaration.id,
+          action: 'documents_recus',
+          documentsVerifies: data.documents_recus,
+          observations: data.observations
         })
-        .eq('id', selectedDeclaration.id)
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erreur vérification documents')
+      }
 
       alert('✅ Documents vérifiés avec succès')
       setShowVerificationModal(false)

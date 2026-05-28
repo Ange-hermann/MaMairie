@@ -186,11 +186,16 @@ export default function AuditMinisterePage() {
         .like('action_type', 'FRAUDE_%')
         .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
 
-      // Utilisateurs connectés
-      const { count: utilisateursConnectes } = await supabase
-        .from('sessions_actives')
-        .select('*', { count: 'exact', head: true })
-        .eq('statut', 'active')
+      // Utilisateurs connectés (connexions réussies uniques dans les dernières 24h)
+      const { data: connexionsRecentes } = await supabase
+        .from('audit_logs')
+        .select('user_id')
+        .eq('action_type', 'AUTH_LOGIN_SUCCESS')
+        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      
+      // Compter les utilisateurs uniques
+      const utilisateursUniques = new Set(connexionsRecentes?.map(log => log.user_id) || [])
+      const utilisateursConnectes = utilisateursUniques.size
 
       setStats({
         totalAujourdhui: totalAujourdhui || 0,

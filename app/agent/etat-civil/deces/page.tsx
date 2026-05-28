@@ -95,6 +95,7 @@ export default function DecesPage() {
       }
 
       if (editingId) {
+        // Modification : mise à jour directe
         const { error } = await supabase
           .from('deces')
           .update(dataToSave)
@@ -103,12 +104,20 @@ export default function DecesPage() {
         if (error) throw error
         alert('✅ Décès modifié avec succès!')
       } else {
-        const { error } = await supabase
-          .from('deces')
-          .insert([dataToSave])
+        // Création : utiliser l'API (avec audit automatique)
+        const response = await fetch('/api/etat-civil/deces', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dataToSave)
+        })
 
-        if (error) throw error
-        alert('✅ Décès enregistré avec succès!')
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Erreur enregistrement décès')
+        }
+
+        const { numeroActe } = await response.json()
+        alert(`✅ Décès enregistré avec succès ! N° ${numeroActe}`)
       }
 
       resetForm()

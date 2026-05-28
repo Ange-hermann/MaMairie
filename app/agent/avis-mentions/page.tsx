@@ -168,15 +168,21 @@ export default function AvisMentionsAgentPage() {
     if (!selectedAvis) return
 
     try {
-      const { error } = await supabase
-        .from('avis_mentions')
-        .update({
-          statut: 'en_traitement',
-          agent_id: userData.id
+      // Utiliser l'API pour approuver (avec audit automatique)
+      const response = await fetch('/api/mentions/update-statut', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mentionId: selectedAvis.id,
+          action: 'approuver',
+          observations: 'Avis validé et mis en traitement'
         })
-        .eq('id', selectedAvis.id)
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erreur validation')
+      }
 
       alert('✅ Avis de mention validé et mis en traitement')
       setShowModal(false)
@@ -190,16 +196,21 @@ export default function AvisMentionsAgentPage() {
     if (!selectedAvis || !motifRejet.trim()) return
 
     try {
-      const { error } = await supabase
-        .from('avis_mentions')
-        .update({
-          statut: 'rejetee',
-          motif_rejet: motifRejet,
-          agent_id: userData.id
+      // Utiliser l'API pour rejeter (avec audit automatique)
+      const response = await fetch('/api/mentions/update-statut', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mentionId: selectedAvis.id,
+          action: 'rejeter',
+          motifRejet: motifRejet
         })
-        .eq('id', selectedAvis.id)
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erreur rejet')
+      }
 
       alert('✅ Avis de mention rejeté')
       setShowRejetModal(false)

@@ -110,6 +110,7 @@ export default function MariagesPage() {
       }
 
       if (editingId) {
+        // Modification : mise à jour directe
         const { error } = await supabase
           .from('mariages')
           .update(dataToSave)
@@ -118,12 +119,20 @@ export default function MariagesPage() {
         if (error) throw error
         alert('✅ Mariage modifié avec succès!')
       } else {
-        const { error } = await supabase
-          .from('mariages')
-          .insert([dataToSave])
+        // Création : utiliser l'API (avec audit automatique)
+        const response = await fetch('/api/etat-civil/mariage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dataToSave)
+        })
 
-        if (error) throw error
-        alert('✅ Mariage enregistré avec succès!')
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Erreur enregistrement mariage')
+        }
+
+        const { numeroActe } = await response.json()
+        alert(`✅ Mariage enregistré avec succès ! N° ${numeroActe}`)
       }
 
       resetForm()

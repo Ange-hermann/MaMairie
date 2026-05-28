@@ -401,15 +401,37 @@ export default function MesDemandesPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex gap-2">
-                            {(request.statut === 'validee' || request.statut === 'prete') && (
-                              <Button 
-                                variant="success" 
-                                size="sm"
-                                onClick={() => downloadPDF(request)}
-                              >
-                                <Download size={16} className="mr-1" />
-                                Télécharger PDF
-                              </Button>
+                            {(request.statut === 'approuvee' || request.statut === 'validee' || request.statut === 'prete') && (
+                              request.pdf_url ? (
+                                <Button 
+                                  variant="success" 
+                                  size="sm"
+                                  onClick={async () => {
+                                    try {
+                                      const response = await fetch(request.pdf_url)
+                                      const blob = await response.blob()
+                                      const url = window.URL.createObjectURL(blob)
+                                      const a = document.createElement('a')
+                                      a.href = url
+                                      a.download = request.pdf_name || 'extrait.pdf'
+                                      document.body.appendChild(a)
+                                      a.click()
+                                      document.body.removeChild(a)
+                                      window.URL.revokeObjectURL(url)
+                                    } catch (error) {
+                                      console.error('Erreur téléchargement:', error)
+                                      alert('Erreur lors du téléchargement du PDF')
+                                    }
+                                  }}
+                                >
+                                  <Download size={16} className="mr-1" />
+                                  Télécharger PDF
+                                </Button>
+                              ) : (
+                                <span className="text-sm text-orange-600 font-medium">
+                                  ⏳ PDF en cours de génération...
+                                </span>
+                              )
                             )}
                             <Button variant="outline" size="sm">
                               <Eye size={16} className="mr-1" />
