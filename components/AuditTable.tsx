@@ -84,8 +84,80 @@ export function AuditTable({
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      {/* Table */}
-      <div className="overflow-x-auto">
+      {/* Vue Mobile - Cartes */}
+      <div className="block md:hidden">
+        <div className="divide-y divide-gray-200">
+          {sortedLogs.map((log) => (
+            <div 
+              key={log.id} 
+              className={`p-4 ${getRowClassName(log)}`}
+              onClick={() => onViewDetails(log)}
+            >
+              {/* En-tête carte */}
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-2 flex-1">
+                  <span className="text-lg">{AUDIT_ACTION_ICONS[log.action_type]}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {AUDIT_ACTION_LABELS[log.action_type]}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(log.created_at).toLocaleString('fr-FR')}
+                    </p>
+                  </div>
+                </div>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${AUDIT_STATUT_COLORS[log.statut].bg} ${AUDIT_STATUT_COLORS[log.statut].text}`}>
+                  {log.statut === 'SUCCESS' && '✅'}
+                  {log.statut === 'FAILED' && '❌'}
+                  {log.statut === 'WARNING' && '⚠️'}
+                </span>
+              </div>
+
+              {/* Détails */}
+              <div className="space-y-1 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500">Utilisateur:</span>
+                  <span className="text-gray-900 font-medium truncate">{log.user_email || 'Système'}</span>
+                </div>
+                {log.entite_reference && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">Réf:</span>
+                    <span className="font-mono text-gray-900">{log.entite_reference}</span>
+                  </div>
+                )}
+                {log.ip_address && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">IP:</span>
+                    <span className="font-mono text-gray-600">{log.ip_address}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Badge rôle */}
+              <div className="mt-2">
+                {log.user_role === 'citoyen' && (
+                  <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
+                    👤 Citoyen
+                  </span>
+                )}
+                {log.user_role === 'agent' && (
+                  <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
+                    👮 Agent
+                  </span>
+                )}
+                {log.user_role === 'ministere' && (
+                  <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">
+                    🏛️ Ministère
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Vue Desktop - Tableau */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -241,11 +313,14 @@ export function AuditTable({
         </table>
       </div>
 
-      {/* Pagination */}
+      {/* Pagination - Optimisée mobile */}
       {totalPages > 1 && onPageChange && (
-        <div className="bg-gray-50 px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-          <div className="text-sm text-gray-700">
-            Page <span className="font-medium">{currentPage}</span> sur{' '}
+        <div className="bg-gray-50 px-3 md:px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+          <div className="text-xs md:text-sm text-gray-700">
+            <span className="hidden sm:inline">Page </span>
+            <span className="font-medium">{currentPage}</span>
+            <span className="hidden sm:inline"> sur </span>
+            <span className="sm:hidden">/</span>
             <span className="font-medium">{totalPages}</span>
           </div>
           <div className="flex gap-2">
@@ -253,7 +328,7 @@ export function AuditTable({
               variant="outline"
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className="px-3 py-1"
+              className="px-2 md:px-3 py-2 min-w-[40px]"
             >
               <ChevronLeft size={18} />
             </Button>
@@ -261,7 +336,7 @@ export function AuditTable({
               variant="outline"
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="px-3 py-1"
+              className="px-2 md:px-3 py-2 min-w-[40px]"
             >
               <ChevronRight size={18} />
             </Button>
