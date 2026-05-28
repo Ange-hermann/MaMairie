@@ -32,19 +32,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Parser les données du QR code
-    let qrInfo
-    try {
-      qrInfo = JSON.parse(qrData)
-    } catch (error) {
-      // QR Code invalide
+    // Le QR code contient simplement le numéro d'acte (texte simple)
+    const numero_acte = qrData.trim()
+
+    if (!numero_acte) {
       await logFraude(
         'QR_INVALIDE',
         {
-          description: 'QR Code invalide scanné (format JSON incorrect)',
+          description: 'QR Code invalide scanné (vide)',
           metadata: {
             qr_data: qrData,
-            raison: 'Format JSON invalide'
+            raison: 'Numéro d\'acte vide'
           }
         },
         request
@@ -52,74 +50,65 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         valide: false,
-        raison: 'Format QR Code invalide'
+        raison: 'QR Code vide'
       })
     }
 
-    const { type, numero_acte, annee } = qrInfo
-
-    if (!type || !numero_acte) {
-      await logFraude(
-        'QR_INVALIDE',
-        {
-          description: 'QR Code invalide scanné (données manquantes)',
-          metadata: {
-            qr_data: qrData,
-            raison: 'Type ou numéro d\'acte manquant'
-          }
-        },
-        request
-      )
-
-      return NextResponse.json({
-        valide: false,
-        raison: 'Données QR Code incomplètes'
-      })
-    }
-
-    // Chercher l'acte dans la base de données
-    const tableName = type === 'naissance' ? 'naissances' 
-                    : type === 'mariage' ? 'mariages'
-                    : type === 'deces' ? 'deces'
-                    : null
-
-    if (!tableName) {
-      await logFraude(
-        'QR_INVALIDE',
-        {
-          description: 'QR Code invalide scanné (type d\'acte inconnu)',
-          metadata: {
-            qr_data: qrData,
-            raison: `Type d'acte inconnu: ${type}`
-          }
-        },
-        request
-      )
-
-      return NextResponse.json({
-        valide: false,
-        raison: 'Type d\'acte inconnu'
-      })
-    }
-
-    // Rechercher l'acte par numéro
-    const { data: acte, error: acteError } = await supabase
-      .from(tableName)
+    // Chercher l'acte dans toutes les tables (naissances, mariages, deces)
+    let acte = null
+    let type = null
+    
+    // Essayer dans naissances
+    const { data: naissanceData } = await supabase
+      .from('naissances')
       .select('*, mairies(nom_mairie, ville)')
       .eq('numero_acte', numero_acte)
       .maybeSingle()
+    
+    if (naissanceData) {
+      acte = naissanceData
+      type = 'naissance'
+    }
+    
+    // Si pas trouvé, essayer dans mariages
+    if (!acte) {
+      const { data: mariageData } = await supabase
+        .from('mariages')
+        .select('*, mairies(nom_mairie, ville)')
+        .eq('numero_acte', numero_acte)
+        .maybeSingle()
+      
+      if (mariageData) {
+        acte = mariageData
+        type = 'mariage'
+      }
+    }
+    
+    // Si pas trouvé, essayer dans deces
+    if (!acte) {
+      const { data: decesData } = await supabase
+        .from('deces')
+        .select('*, mairies(nom_mairie, ville)')
+        .eq('numero_acte', numero_acte)
+        .maybeSingle()
+      
+      if (decesData) {
+        acte = decesData
+        type = 'deces'
+      }
+    }
 
-    if (acteError || !acte) {
+    // Vérifier si l'acte a été trouvé
+    if (!acte || !type) {
       // Acte introuvable = fraude potentielle
       await logFraude(
         'ACTE_INVALIDE',
         {
           description: 'Acte introuvable lors de la vérification QR',
-          entiteType: `acte_${type}`,
           entiteReference: numero_acte,
           metadata: {
             qr_data: qrData,
-            raison: 'Acte introuvable dans la base de données'
+            raison: 'Acte introuvable dans aucune table'
           }
         },
         request
@@ -128,29 +117,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         valide: false,
         raison: 'Acte introuvable dans la base de données'
-      })
-    }
-
-    // Vérifier la cohérence des données
-    if (annee && acte.annee && acte.annee.toString() !== annee.toString()) {
-      await logFraude(
-        'QR_INVALIDE',
-        {
-          description: 'QR Code invalide (année incohérente)',
-          entiteType: `acte_${type}`,
-          entiteId: acte.id,
-          entiteReference: numero_acte,
-          metadata: {
-            qr_data: qrData,
-            raison: `Année QR: ${annee}, Année DB: ${acte.annee}`
-          }
-        },
-        request
-      )
-
-      return NextResponse.json({
-        valide: false,
-        raison: 'Données QR Code incohérentes'
       })
     }
 

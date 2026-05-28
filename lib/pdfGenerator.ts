@@ -84,16 +84,11 @@ const formatTime = (timeString?: string): string => {
   return timeString.substring(0, 5) // HH:MM
 }
 
-// Génération du QR Code de vérification (contient le numéro d'acte complet)
+// Génération du QR Code de vérification (contient seulement le numéro d'acte)
 const generateVerificationQRCode = async (numeroActe: string, annee: number, typeActe: string): Promise<string> => {
   try {
-    // QR Code pour vérifier l'authenticité (contient type, numéro et année)
-    const qrData = JSON.stringify({
-      type: typeActe,
-      numero_acte: numeroActe,
-      annee: annee
-    })
-    const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
+    // QR Code contient seulement le numéro d'acte (texte simple)
+    const qrCodeDataUrl = await QRCode.toDataURL(numeroActe, {
       width: 120,
       margin: 1,
       color: {
