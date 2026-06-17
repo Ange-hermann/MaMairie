@@ -164,6 +164,10 @@ export const NotificationBell: React.FC = () => {
         return '❌'
       case 'statut_change':
         return '📢'
+      case 'reservation_mariage_validee':
+        return '💍'
+      case 'reservation_mariage_rejetee':
+        return '❌'
       default:
         return '🔔'
     }

@@ -39,6 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role }) => {
     { href: '/mes-demandes', label: 'Mes Demandes', icon: FileText },
     { href: '/demande-extrait', label: 'Nouvelle Demande', icon: FileText },
     { href: '/citoyen/declaration-naissance', label: 'Déclarer une Naissance', icon: Baby },
+    { href: '/citoyen/reservation-mariage', label: 'Réservation Mariage', icon: Heart },
     { href: '/citoyen/avis-mention', label: 'Avis de Mention', icon: AlertTriangle },
     { href: '/citoyen/suivre-mention', label: 'Suivre Mention', icon: FileCheck },
     { href: '/suivi', label: 'Suivre une Déclaration', icon: FileCheck },
