@@ -31,6 +31,7 @@ export function VoiceAgentWidget() {
   const autoListenRef = useRef(false)
   const [isMuted, setIsMuted] = useState(false)
   const [userContext, setUserContext] = useState<UserContext | null>(null)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [showPermissionGuide, setShowPermissionGuide] = useState(false)
 
@@ -43,12 +44,24 @@ export function VoiceAgentWidget() {
   // ─── Charger le contexte citoyen ────────────────────────────────
   useEffect(() => {
     loadUserContext()
+    // Écouter connexion/déconnexion en temps réel — pas besoin de refresh
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setIsLoggedIn(true)
+        loadUserContext()
+      } else {
+        setIsLoggedIn(false)
+        setUserContext(null)
+      }
+    })
+    return () => subscription.unsubscribe()
   }, [])
 
   const loadUserContext = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) { setIsLoggedIn(false); return }
+      setIsLoggedIn(true)
 
       const { data: profile } = await supabase
         .from('users')
@@ -125,10 +138,31 @@ export function VoiceAgentWidget() {
 
   // ─── Wake word détecté ───────────────────────────────────────────
   const handleWakeWordDetected = useCallback(async () => {
-    if (isListeningRef.current) return
-    await pauseWakeWordDetection()
-    startListening()
-  }, [])
+    if (isListeningRef.current || isOpen) return
+    setIsOpen(true)
+    setIsMinimized(false)
+    // createOrchestrator sera appelé dans handleOpen via le state
+    // On démarre juste l'écoute après un délai pour laisser le widget s'ouvrir
+    setTimeout(() => startListeningRef.current(), 800)
+  }, [isOpen])
+
+  // ─── Démarrer wake word dès connexion ───────────────────────────
+  useEffect(() => {
+    if (!isLoggedIn) { stopWakeWordDetection(); return }
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SR) return
+    startWakeWordDetection('', handleWakeWordDetected).catch(() => {})
+    return () => { stopWakeWordDetection() }
+  }, [isLoggedIn, handleWakeWordDetected])
+
+  // Pause wake word quand widget ouvert, reprendre quand fermé
+  useEffect(() => {
+    if (isOpen) {
+      pauseWakeWordDetection()
+    } else if (isLoggedIn) {
+      resumeWakeWordDetection()
+    }
+  }, [isOpen, isLoggedIn])
 
   // ─── Démarrer l'écoute STT ───────────────────────────────────────
   const startListening = useCallback(() => {
@@ -245,15 +279,26 @@ export function VoiceAgentWidget() {
     setIsMinimized(false)
     if (agentState !== 'idle') return
 
-    const ctx = userContext || { nom: '', prenom: 'Citoyen', commune: '', demandes: [], userId: '' }
-    createOrchestrator(ctx)
+    // Attendre le contexte utilisateur si pas encore chargé (max 2s)
+    let ctx = userContext
+    if (!ctx || !ctx.prenom) {
+      await new Promise<void>(resolve => {
+        const deadline = setTimeout(resolve, 2000)
+        const check = setInterval(() => {
+          if (userContext?.prenom) { clearInterval(check); clearTimeout(deadline); resolve() }
+        }, 100)
+      })
+      ctx = userContext
+    }
+    const finalCtx = ctx || { nom: '', prenom: '', commune: '', demandes: [], userId: '' }
+
+    createOrchestrator(finalCtx)
     setAgentState('sleeping')
 
-    // iOS/Android : speak() doit être appelé DANS le handler du clic, sans await avant
-    // On lance le TTS immédiatement, puis on demande le micro en parallèle
+    // iOS/Android : speak() doit être appelé DANS le handler du clic
     orchestratorRef.current?.speakWelcome()
 
-    // Permission micro (après le speak pour ne pas perdre le contexte du clic)
+    // Permission micro
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       stream.getTracks().forEach(t => t.stop())
@@ -300,11 +345,11 @@ export function VoiceAgentWidget() {
   // ─── Render ──────────────────────────────────────────────────────
   return (
     <>
-      {/* === BADGE FLOTTANT (toujours visible) === */}
-      {!isOpen && (
+      {/* === BADGE FLOTTANT (visible seulement si connecté) === */}
+      {!isOpen && isLoggedIn && (
         <button
           onClick={handleOpen}
-          className="fixed bottom-20 right-4 z-50 flex items-center gap-2 bg-white border border-gray-200 shadow-lg rounded-full px-3 py-2 hover:shadow-xl transition-all group"
+          className="fixed bottom-20 right-4 z-50 flex items-center gap-2 bg-white border border-gray-200 shadow-lg rounded-full px-3 py-2 hover:shadow-xl transition-all"
           title="Ouvrir MaMairie IA"
         >
           <span className="text-base">{getStateEmoji()}</span>
@@ -514,6 +559,11 @@ export function VoiceAgentWidget() {
         @keyframes bounce {
           from { transform: translateY(0); }
           to   { transform: translateY(-8px); }
+        }
+        @keyframes badge-bounce {
+          0%, 100% { transform: translateY(0) scale(1); }
+          40% { transform: translateY(-10px) scale(1.05); }
+          60% { transform: translateY(-6px) scale(1.02); }
         }
       `}</style>
     </>
