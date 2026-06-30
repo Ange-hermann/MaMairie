@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { agentFormStore } from '@/lib/voiceAgent/agentFormStore'
 import { Sidebar } from '@/components/layout/Sidebar'
@@ -17,7 +17,7 @@ import type { GeoSelection } from '@/types/geo'
 import { formatGeoSelection } from '@/lib/geoHelpers'
 import { MapPin, AlertCircle } from 'lucide-react'
 
-export default function DemandeExtraitPage() {
+function DemandeExtraitContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClientComponentClient()
@@ -359,7 +359,7 @@ export default function DemandeExtraitPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50" suppressHydrationWarning>
       <Sidebar role="citoyen" />
       
       <div className="flex-1 w-full lg:w-auto">
@@ -811,5 +811,13 @@ export default function DemandeExtraitPage() {
         </main>
       </div>
     </div>
+  )
+}
+
+export default function DemandeExtraitPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Chargement...</div>}>
+      <DemandeExtraitContent />
+    </Suspense>
   )
 }
