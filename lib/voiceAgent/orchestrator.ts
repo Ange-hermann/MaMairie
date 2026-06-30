@@ -165,6 +165,7 @@ export class VoiceOrchestrator {
 
     // ─── Fallback Groq pour questions libres ──────────────────────────
     try {
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
       const response = await fetch('/api/voice-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -172,7 +173,8 @@ export class VoiceOrchestrator {
           message: transcript,
           conversationHistory: this.conversationHistory,
           userContext: this.userContext,
-          intent: intent.type
+          intent: intent.type,
+          isMobile
         })
       })
 

@@ -21,13 +21,25 @@ export class MaMairieTTS {
   private loadVoices(): void {
     const voices = this.synth.getVoices()
     if (voices.length === 0) return
+
+    const fr = voices.filter(v => v.lang.startsWith('fr'))
+
+    // Priorité : voix féminines françaises connues sur chaque plateforme
     this.voice =
-      voices.find(v => v.name.toLowerCase().includes('google') && v.lang === 'fr-FR') ||
-      voices.find(v => v.name.toLowerCase().includes('thomas')) ||
-      voices.find(v => v.name.includes('Julie') && v.lang.startsWith('fr')) ||
-      voices.find(v => v.lang === 'fr-FR') ||
-      voices.find(v => v.lang.startsWith('fr')) ||
-      voices[0] ||
+      // iOS Safari — Amélie (féminine, fr-CA) ou Marie
+      fr.find(v => v.name === 'Amélie') ||
+      fr.find(v => v.name === 'Marie') ||
+      // Android Chrome — Google français féminin
+      fr.find(v => v.name === 'Google français') ||
+      fr.find(v => /google/i.test(v.name) && v.lang === 'fr-FR') ||
+      // Windows — Hortense
+      fr.find(v => v.name.includes('Hortense')) ||
+      // macOS — Amelie ou Julie
+      fr.find(v => v.name.includes('Julie')) ||
+      // Tout fr-FR féminin (éviter Thomas qui est masculin)
+      fr.find(v => v.lang === 'fr-FR' && !/thomas|nicolas|pierre|jean|paul|mathieu/i.test(v.name)) ||
+      fr.find(v => v.lang === 'fr-FR') ||
+      fr[0] ||
       null
   }
 

@@ -31,7 +31,7 @@ const LOCAL_RESPONSES: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, conversationHistory, userContext, intent } = await req.json()
+    const { message, conversationHistory, userContext, intent, isMobile } = await req.json()
 
     if (!message?.trim()) {
       return NextResponse.json({ error: 'Message vide' }, { status: 400 })
@@ -64,17 +64,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Réponse locale immédiate si l'intention est connue et spécifique — pas d'appel API
-    if (intent && intent !== 'QUESTION_GENERALE' && LOCAL_RESPONSES[intent]) {
-      const localReply = LOCAL_RESPONSES[intent]
-      const action = INTENT_ROUTES[intent] || null
-      console.log(`[Local] Intent ${intent} → réponse locale${action ? ' + navigation' : ''}`)
-      return NextResponse.json({ reply: localReply, intent, action, local: true })
-    }
-
     const apiKey = process.env.GROQ_API_KEY
     if (!apiKey) {
-      return NextResponse.json({ reply: LOCAL_RESPONSES.QUESTION_GENERALE, intent })
+      // Fallback sans clé : réponse générique personnalisée avec le prénom
+      const prenom = userContext?.prenom || ''
+      const fallback = prenom
+        ? `${prenom}, je peux vous aider avec vos démarches d'état civil. Dites-moi ce dont vous avez besoin.`
+        : LOCAL_RESPONSES.QUESTION_GENERALE
+      return NextResponse.json({ reply: fallback, intent })
     }
 
     // Construire le résumé des données du citoyen
@@ -124,10 +121,10 @@ TU NE PEUX PAS :
 - Accéder aux données d'autres citoyens
 
 RÈGLES DE RÉPONSE :
-- MAXIMUM 3 phrases courtes et claires
+- ${isMobile ? 'MOBILE : MAXIMUM 1 à 2 phrases TRÈS courtes. Sois ultra-concis.' : 'MAXIMUM 3 phrases courtes et claires.'}
 - Parle comme si tu étais au téléphone — simple et direct
 - Si tu lis des données, cite-les précisément (statut, code, date)
-- Mentionne toujours le prénom du citoyen
+- Mentionne le prénom du citoyen une seule fois
 
 ESPACE CITOYEN DE ${userContext?.prenom || 'ce citoyen'} ${userContext?.nom || ''} :
 Commune : ${userContext?.commune || 'Non renseignée'}
