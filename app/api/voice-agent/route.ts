@@ -64,9 +64,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Salutation personnalisée avec prénom — pas besoin de Groq
+    if (intent === 'SALUTATION') {
+      const prenom = userContext?.prenom || ''
+      const reply = prenom
+        ? `Bonjour ${prenom} ! Je suis MaMairie IA, votre assistante d'état civil. Comment puis-je vous aider aujourd'hui ?`
+        : `Bonjour ! Je suis MaMairie IA, votre assistante d'état civil. Comment puis-je vous aider ?`
+      return NextResponse.json({ reply, intent })
+    }
+
     const apiKey = process.env.GROQ_API_KEY
     if (!apiKey) {
-      // Fallback sans clé : réponse générique personnalisée avec le prénom
       const prenom = userContext?.prenom || ''
       const fallback = prenom
         ? `${prenom}, je peux vous aider avec vos démarches d'état civil. Dites-moi ce dont vous avez besoin.`

@@ -300,211 +300,222 @@ export function VoiceAgentWidget() {
   // ─── Render ──────────────────────────────────────────────────────
   return (
     <>
-      {/* ── Styles animations ── */}
+      {/* === BADGE FLOTTANT (toujours visible) === */}
+      {!isOpen && (
+        <button
+          onClick={handleOpen}
+          className="fixed bottom-20 right-4 z-50 flex items-center gap-2 bg-white border border-gray-200 shadow-lg rounded-full px-3 py-2 hover:shadow-xl transition-all group"
+          title="Ouvrir MaMairie IA"
+        >
+          <span className="text-base">{getStateEmoji()}</span>
+          <span className="text-xs font-semibold text-gray-700">MaMairie IA</span>
+          <MessageCircle size={16} className="text-orange-500" />
+        </button>
+      )}
+
+      {/* === PANNEAU PRINCIPAL === */}
+      {isOpen && (
+        <div className={`fixed bottom-20 right-4 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden transition-all duration-300 ${isMinimized ? 'h-14' : 'h-auto'}`}>
+
+          {/* ── Header ── */}
+          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-orange-500 font-bold text-sm">
+                IA
+              </div>
+              <div>
+                <p className="text-white font-bold text-sm leading-none">MaMairie IA</p>
+                <p className="text-orange-100 text-xs">Assistant vocal d'état civil</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setIsMuted(!isMuted)}
+                className="p-1.5 text-white hover:bg-orange-400 rounded-lg transition-all"
+                title={isMuted ? 'Activer le son' : 'Couper le son'}
+              >
+                {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              </button>
+              <button
+                onClick={() => setIsMinimized(!isMinimized)}
+                className="p-1.5 text-white hover:bg-orange-400 rounded-lg transition-all"
+              >
+                {isMinimized ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+              <button
+                onClick={handleClose}
+                className="p-1.5 text-white hover:bg-orange-400 rounded-lg transition-all"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* ── Corps (masqué si minimisé) ── */}
+          {!isMinimized && (
+            <div className="flex flex-col">
+
+              {/* ── Indicateur état ── */}
+              <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
+                <AgentStateDisplay state={agentState} />
+              </div>
+
+              {/* ── Animation visuelle selon état ── */}
+              <div className="flex flex-col items-center justify-center py-4 px-4 gap-3">
+
+                {agentState === 'listening' && (
+                  <div className="flex items-end gap-1 h-10">
+                    {[...Array(7)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-1.5 bg-orange-500 rounded-full"
+                        style={{
+                          height: `${Math.random() * 32 + 8}px`,
+                          animation: `sound-wave 0.6s ease-in-out ${i * 0.08}s infinite alternate`
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {agentState === 'processing' && (
+                  <div className="flex gap-1.5">
+                    {[0, 1, 2].map(i => (
+                      <div
+                        key={i}
+                        className="w-2.5 h-2.5 bg-orange-400 rounded-full"
+                        style={{ animation: `bounce 0.8s ease-in-out ${i * 0.15}s infinite alternate` }}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {agentState === 'speaking' && (
+                  <div className="flex items-center gap-1.5">
+                    {[...Array(5)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-1 bg-green-500 rounded-full"
+                        style={{
+                          height: `${12 + i * 4}px`,
+                          animation: `sound-wave 0.5s ease-in-out ${i * 0.1}s infinite alternate`
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Transcription en temps réel */}
+                {(transcript || isFinalTranscript) && (
+                  <TranscriptionDisplay text={transcript} isFinal={isFinalTranscript} />
+                )}
+
+                {/* Erreur */}
+                {errorMsg && (
+                  <div className="w-full px-3 py-2 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                    {errorMsg}
+                  </div>
+                )}
+              </div>
+
+              {/* ── Bulles de conversation ── */}
+              <div className="px-3 pb-2 max-h-52 overflow-y-auto">
+                <ConversationBubbles messages={messages} />
+              </div>
+
+              {/* ── Contrôles ── */}
+              <div className="p-3 border-t border-gray-100 flex gap-2">
+
+                {/* Bouton conversation continue */}
+                <button
+                  onClick={toggleAutoListen}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-medium text-sm transition-all ${
+                    autoListen
+                      ? 'bg-green-500 hover:bg-green-600 text-white animate-pulse'
+                      : 'bg-orange-500 hover:bg-orange-600 text-white'
+                  }`}
+                >
+                  {autoListen ? <><Mic size={18} /> En écoute...</> : <><Mic size={18} /> Démarrer</>}
+                </button>
+
+                {/* Bouton parler unique */}
+                {!autoListen && agentState !== 'listening' && (
+                  <button
+                    onClick={startListening}
+                    disabled={agentState === 'processing' || agentState === 'speaking'}
+                    className="px-3 py-2.5 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-300 text-gray-600 rounded-xl transition-all"
+                    title="Une seule question"
+                  >
+                    <Mic size={18} />
+                  </button>
+                )}
+
+                {/* Arrêter si en écoute manuelle */}
+                {agentState === 'listening' && !autoListen && (
+                  <button
+                    onClick={stopListening}
+                    className="px-3 py-2.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-xl transition-all"
+                  >
+                    <MicOff size={18} />
+                  </button>
+                )}
+
+                {/* Couper la parole */}
+                {agentState === 'speaking' && (
+                  <button
+                    onClick={() => orchestratorRef.current?.stopSpeaking()}
+                    className="px-3 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition-all"
+                    title="Couper"
+                  >
+                    <VolumeX size={18} />
+                  </button>
+                )}
+
+                {/* Effacer historique */}
+                {messages.length > 0 && (
+                  <button
+                    onClick={() => { setMessages([]); orchestratorRef.current?.clearHistory() }}
+                    className="px-3 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-xl text-xs transition-all"
+                    title="Effacer la conversation"
+                  >
+                    ↺
+                  </button>
+                )}
+              </div>
+
+              {/* ── Guide permission micro ── */}
+              {showPermissionGuide && (
+                <div className="mx-3 mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                  <p className="font-bold mb-1">🔒 Autoriser le microphone</p>
+                  <ol className="list-decimal list-inside space-y-0.5">
+                    <li>Cliquez sur 🔒 dans la barre d'adresse</li>
+                    <li>Sélectionnez <strong>Autoriser</strong> pour le micro</li>
+                    <li>Rechargez la page</li>
+                  </ol>
+                  <button
+                    onClick={() => { setShowPermissionGuide(false); handleOpen() }}
+                    className="mt-2 w-full py-1.5 bg-orange-500 text-white rounded-lg text-xs font-medium"
+                  >
+                    Réessayer
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Styles animations CSS ── */}
       <style jsx global>{`
         @keyframes sound-wave {
           from { transform: scaleY(0.4); }
           to   { transform: scaleY(1); }
         }
-        @keyframes ia-bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-6px); }
-        }
-        @keyframes ia-pulse-ring {
-          0%   { transform: scale(1);   opacity: 0.8; }
-          100% { transform: scale(1.6); opacity: 0; }
+        @keyframes bounce {
+          from { transform: translateY(0); }
+          to   { transform: translateY(-8px); }
         }
       `}</style>
-
-      {/* === BADGE FLOTTANT === */}
-      {!isOpen && (
-        <button
-          onClick={handleOpen}
-          className="fixed bottom-20 right-4 z-50 flex items-center gap-2 bg-orange-500 shadow-lg rounded-full px-4 py-3 hover:bg-orange-600 active:scale-95 transition-all"
-        >
-          <span className="text-xl">🎙️</span>
-          <span className="text-sm font-bold text-white">MaMairie IA</span>
-        </button>
-      )}
-
-      {/* === PANNEAU PRINCIPAL ===
-          Desktop : 320px en bas à droite
-          Mobile  : plein écran  */}
-      {isOpen && (
-        <div className={`
-          fixed z-50 bg-white shadow-2xl flex flex-col overflow-hidden
-          /* mobile : plein écran */
-          inset-0
-          /* desktop : petit panneau */
-          sm:inset-auto sm:bottom-20 sm:right-4 sm:w-80 sm:max-h-[600px] sm:rounded-2xl sm:border sm:border-gray-100
-          ${isMinimized ? 'sm:h-14' : ''}
-        `}>
-
-          {/* ── Header ── */}
-          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-orange-500 font-bold text-sm shadow">
-                IA
-              </div>
-              <div>
-                <p className="text-white font-bold text-sm leading-tight">MaMairie IA</p>
-                <p className="text-orange-100 text-xs">Assistant d'état civil</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <button onClick={() => setIsMuted(!isMuted)} className="p-2 text-white hover:bg-orange-400 rounded-lg">
-                {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-              </button>
-              <button onClick={() => setIsMinimized(!isMinimized)} className="p-2 text-white hover:bg-orange-400 rounded-lg sm:flex hidden">
-                {isMinimized ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-              </button>
-              <button onClick={handleClose} className="p-2 text-white hover:bg-orange-400 rounded-lg">
-                <X size={18} />
-              </button>
-            </div>
-          </div>
-
-          {/* ── Corps ── */}
-          {!isMinimized && (
-            <div className="flex flex-col flex-1 min-h-0">
-
-              {/* ── Zone centrale : animation + bulles ── */}
-              <div className="flex-1 overflow-y-auto flex flex-col">
-
-                {/* Animation état */}
-                <div className="flex flex-col items-center justify-center py-6 px-4 gap-4 flex-shrink-0">
-
-                  {/* Cercle état principal */}
-                  <div className="relative flex items-center justify-center">
-                    {/* Anneau pulsant si actif */}
-                    {(agentState === 'listening' || agentState === 'speaking') && (
-                      <div className="absolute w-24 h-24 rounded-full bg-orange-400 opacity-30"
-                        style={{ animation: 'ia-pulse-ring 1.2s ease-out infinite' }} />
-                    )}
-                    <div className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-lg transition-all ${
-                      agentState === 'listening'  ? 'bg-orange-100 border-4 border-orange-400' :
-                      agentState === 'speaking'   ? 'bg-green-100 border-4 border-green-400' :
-                      agentState === 'processing' ? 'bg-blue-100 border-4 border-blue-400' :
-                      'bg-gray-100 border-4 border-gray-300'
-                    }`}>
-                      {agentState === 'listening'  ? '🎤' :
-                       agentState === 'speaking'   ? '🔊' :
-                       agentState === 'processing' ? '🤔' : '💬'}
-                    </div>
-                  </div>
-
-                  {/* Label état */}
-                  <p className={`text-base font-semibold ${
-                    agentState === 'listening'  ? 'text-orange-600' :
-                    agentState === 'speaking'   ? 'text-green-600' :
-                    agentState === 'processing' ? 'text-blue-600' :
-                    'text-gray-500'
-                  }`}>
-                    {agentState === 'listening'  ? 'Je vous écoute...' :
-                     agentState === 'speaking'   ? 'Je parle...' :
-                     agentState === 'processing' ? 'Je réfléchis...' :
-                     agentState === 'sleeping'   ? 'Prêt' : 'MaMairie IA'}
-                  </p>
-
-                  {/* Transcription temps réel */}
-                  {transcript && (
-                    <div className="w-full px-4 py-2 bg-orange-50 rounded-xl text-sm text-orange-800 text-center italic">
-                      "{transcript}"
-                    </div>
-                  )}
-
-                  {/* Erreur */}
-                  {errorMsg && (
-                    <div className="w-full px-4 py-2 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 text-center">
-                      {errorMsg}
-                    </div>
-                  )}
-
-                  {/* Guide permission */}
-                  {showPermissionGuide && (
-                    <div className="w-full p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
-                      <p className="font-bold mb-1">🔒 Autoriser le microphone</p>
-                      <p className="text-xs mb-2">Appuyez sur 🔒 dans la barre d'adresse → <strong>Autoriser</strong> le micro</p>
-                      <button
-                        onClick={() => { setShowPermissionGuide(false); handleOpen() }}
-                        className="w-full py-2 bg-orange-500 text-white rounded-lg text-sm font-medium"
-                      >
-                        Réessayer
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Bulles conversation */}
-                {messages.length > 0 && (
-                  <div className="px-3 pb-4">
-                    <ConversationBubbles messages={messages} />
-                  </div>
-                )}
-              </div>
-
-              {/* ── Contrôles bas ── */}
-              <div className="flex-shrink-0 p-4 border-t border-gray-100 bg-white">
-
-                {/* Bouton micro principal — GRAND sur mobile */}
-                <button
-                  onClick={agentState === 'listening' ? stopListening : startListening}
-                  disabled={agentState === 'processing' || agentState === 'speaking'}
-                  className={`w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all active:scale-95 shadow-md ${
-                    agentState === 'listening'
-                      ? 'bg-red-500 text-white'
-                      : agentState === 'processing' || agentState === 'speaking'
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-orange-500 text-white hover:bg-orange-600'
-                  }`}
-                >
-                  {agentState === 'listening'
-                    ? <><MicOff size={24} /> Arrêter</>
-                    : agentState === 'processing'
-                    ? <><span className="text-xl">⏳</span> Traitement...</>
-                    : agentState === 'speaking'
-                    ? <><span className="text-xl">🔊</span> En train de parler</>
-                    : <><Mic size={24} /> Parler</>
-                  }
-                </button>
-
-                {/* Ligne boutons secondaires */}
-                <div className="flex gap-2 mt-3">
-                  {/* Mode auto-écoute */}
-                  <button
-                    onClick={toggleAutoListen}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-1.5 transition-all ${
-                      autoListen ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-gray-100 text-gray-600 border border-gray-200'
-                    }`}
-                  >
-                    {autoListen ? <><Mic size={15} /> Auto ON</> : <><Mic size={15} /> Auto OFF</>}
-                  </button>
-
-                  {/* Couper parole */}
-                  {agentState === 'speaking' && (
-                    <button
-                      onClick={() => orchestratorRef.current?.stopSpeaking()}
-                      className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl border border-gray-200"
-                    >
-                      <VolumeX size={16} />
-                    </button>
-                  )}
-
-                  {/* Effacer */}
-                  {messages.length > 0 && (
-                    <button
-                      onClick={() => { setMessages([]); orchestratorRef.current?.clearHistory() }}
-                      className="px-4 py-2.5 bg-gray-100 text-gray-500 rounded-xl border border-gray-200 text-sm"
-                    >
-                      ↺
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </>
   )
 }

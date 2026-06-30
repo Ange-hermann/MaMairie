@@ -11,11 +11,14 @@ export class MaMairieTTS {
   constructor() {
     this.synth = window.speechSynthesis
     this.loadVoices()
+    // Chrome/Android charge les voix en async
     if (this.synth.onvoiceschanged !== undefined) {
       this.synth.onvoiceschanged = () => this.loadVoices()
     }
-    // Chrome charge les voix en async — forcer un 2e chargement
+    // Forcer plusieurs tentatives de chargement
+    setTimeout(() => this.loadVoices(), 100)
     setTimeout(() => this.loadVoices(), 500)
+    setTimeout(() => this.loadVoices(), 1500)
   }
 
   private loadVoices(): void {
@@ -96,6 +99,42 @@ export class MaMairieTTS {
     this.synth.speak(utterance)
   }
 
+  private waitForVoices(callback: () => void, maxWaitMs = 3000): void {
+    const voices = this.synth.getVoices()
+    if (voices.length > 0) {
+      this.loadVoices()
+      callback()
+      return
+    }
+    // Voix pas encore chargées — attendre l'événement
+    const deadline = setTimeout(() => {
+      // Timeout dépassé : parler quand même avec la voix par défaut
+      callback()
+    }, maxWaitMs)
+
+    const handler = () => {
+      clearTimeout(deadline)
+      this.loadVoices()
+      callback()
+    }
+    if (this.synth.onvoiceschanged !== undefined) {
+      const prev = this.synth.onvoiceschanged
+      this.synth.onvoiceschanged = (e) => {
+        this.synth.onvoiceschanged = prev
+        handler()
+      }
+    } else {
+      // Fallback poll
+      const poll = setInterval(() => {
+        if (this.synth.getVoices().length > 0) {
+          clearInterval(poll)
+          clearTimeout(deadline)
+          handler()
+        }
+      }, 100)
+    }
+  }
+
   speak(text: string, onEnd?: () => void): void {
     const cleanText = text
       .replace(/[\u{1F300}-\u{1FFFF}]/gu, '')
@@ -110,10 +149,7 @@ export class MaMairieTTS {
     this.retryCount = 0
     this.isSpeaking = false
 
-    // Vérifier que les voix sont chargées
-    if (!this.voice) this.loadVoices()
-
-    this.doSpeak(cleanText, onEnd)
+    this.waitForVoices(() => this.doSpeak(cleanText, onEnd))
   }
 
   stop(): void {
