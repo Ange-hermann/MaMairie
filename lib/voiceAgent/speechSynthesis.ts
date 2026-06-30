@@ -74,12 +74,6 @@ export class MaMairieTTS {
         this.synth.cancel()
         done()
       }, 30_000)
-      // KeepAlive Chrome : resume() seul suffit, pas besoin de pause()
-      this.keepAliveTimer = setInterval(() => {
-        if (this.synth.speaking && !this.synth.paused) {
-          this.synth.resume()
-        }
-      }, 5_000)
     }
 
     utterance.onend = done
