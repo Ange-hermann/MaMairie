@@ -249,7 +249,11 @@ export function VoiceAgentWidget() {
     createOrchestrator(ctx)
     setAgentState('sleeping')
 
-    // Permission micro
+    // iOS/Android : speak() doit être appelé DANS le handler du clic, sans await avant
+    // On lance le TTS immédiatement, puis on demande le micro en parallèle
+    orchestratorRef.current?.speakWelcome()
+
+    // Permission micro (après le speak pour ne pas perdre le contexte du clic)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       stream.getTracks().forEach(t => t.stop())
@@ -257,11 +261,7 @@ export function VoiceAgentWidget() {
     } catch {
       setMicPermission('denied')
       setShowPermissionGuide(true)
-      return
     }
-
-    // Message de bienvenue (après geste utilisateur → TTS autorisé)
-    setTimeout(() => orchestratorRef.current?.speakWelcome(), 300)
   }
 
   // ─── Fermer le widget ────────────────────────────────────────────

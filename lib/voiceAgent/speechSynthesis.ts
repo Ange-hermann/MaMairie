@@ -38,48 +38,50 @@ export class MaMairieTTS {
 
   private doSpeak(text: string, onEnd?: () => void): void {
     this.clearTimers()
-    this.synth.cancel()
 
-    // Chrome: cancel() est asynchrone — petit délai avant de parler
-    setTimeout(() => {
-      const utterance = new SpeechSynthesisUtterance(text)
-      if (this.voice) utterance.voice = this.voice
-      utterance.lang = 'fr-FR'
-      utterance.rate = 0.9
-      utterance.pitch = 1.0
-      utterance.volume = 1.0
+    // Annuler seulement si déjà en train de parler (évite de casser le contexte audio iOS)
+    if (this.synth.speaking || this.synth.pending) {
+      this.synth.cancel()
+    }
 
-      let finished = false
-      const done = () => {
-        if (finished) return
-        finished = true
-        this.clearTimers()
-        this.isSpeaking = false
-        onEnd?.()
-      }
+    const utterance = new SpeechSynthesisUtterance(text)
+    if (this.voice) utterance.voice = this.voice
+    utterance.lang = 'fr-FR'
+    utterance.rate = 0.9
+    utterance.pitch = 1.0
+    utterance.volume = 1.0
 
-      utterance.onstart = () => {
-        this.isSpeaking = true
-        // Watchdog 60s — si onend ne se déclenche jamais
-        this.watchdogTimer = setTimeout(() => {
-          this.synth.cancel()
-          done()
-        }, 60_000)
-        // KeepAlive — fix Chrome freeze après ~15s
-        this.keepAliveTimer = setInterval(() => {
-          if (this.synth.speaking) { this.synth.pause(); this.synth.resume() }
-        }, 10_000)
-      }
+    let finished = false
+    const done = () => {
+      if (finished) return
+      finished = true
+      this.clearTimers()
+      this.isSpeaking = false
+      onEnd?.()
+    }
 
-      utterance.onend = done
-      utterance.onerror = (e: any) => {
-        if (e.error === 'interrupted' || e.error === 'canceled') return
-        console.warn('[TTS] onerror:', e.error)
+    utterance.onstart = () => {
+      this.isSpeaking = true
+      // Watchdog 60s — si onend ne se déclenche jamais
+      this.watchdogTimer = setTimeout(() => {
+        this.synth.cancel()
         done()
-      }
+      }, 60_000)
+      // KeepAlive — fix Chrome/Android freeze après ~15s
+      this.keepAliveTimer = setInterval(() => {
+        if (this.synth.speaking) { this.synth.pause(); this.synth.resume() }
+      }, 10_000)
+    }
 
-      this.synth.speak(utterance)
-    }, 80)
+    utterance.onend = done
+    utterance.onerror = (e: any) => {
+      if (e.error === 'interrupted' || e.error === 'canceled') return
+      console.warn('[TTS] onerror:', e.error)
+      done()
+    }
+
+    // iOS Safari : speak() doit être appelé SANS délai depuis un event handler
+    this.synth.speak(utterance)
   }
 
   speak(text: string, onEnd?: () => void): void {
