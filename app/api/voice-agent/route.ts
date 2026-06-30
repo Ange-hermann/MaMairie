@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+export const runtime = 'nodejs'
+
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
 
 // Navigation automatique par intention — routes réelles du projet
