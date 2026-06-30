@@ -6,7 +6,7 @@ export type STTCallbacks = {
 }
 
 export class MaMairieSTT {
-  private recognition: SpeechRecognition | null = null
+  private recognition: any = null
   private isListening = false
   private finalTranscript = ''
   private silenceTimer: ReturnType<typeof setTimeout> | null = null
@@ -25,7 +25,7 @@ export class MaMairieSTT {
     this.recognition.interimResults = true
     this.recognition.maxAlternatives = 1
 
-    this.recognition.onresult = (event: SpeechRecognitionEvent) => {
+    this.recognition.onresult = (event: any) => {
       this.finalTranscript = ''
       let interimText = ''
 
@@ -48,7 +48,6 @@ export class MaMairieSTT {
     }
 
     this.recognition.onspeechend = () => {
-      // Si onresult n'a pas encore tiré un résultat final, forcer stop
       if (!this.resultFired) {
         this.recognition?.stop()
       }
@@ -57,13 +56,12 @@ export class MaMairieSTT {
     this.recognition.onend = () => {
       this.clearSilenceTimer()
       this.isListening = false
-      // Si on n'a jamais reçu de résultat final, appeler onEnd
       if (!this.resultFired) {
         this.callbacks.onEnd()
       }
     }
 
-    this.recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+    this.recognition.onerror = (event: any) => {
       this.clearSilenceTimer()
       this.isListening = false
       const ignoredErrors = ['no-speech', 'aborted', 'interrupted']
