@@ -168,8 +168,8 @@ Intention détectée : ${intent || 'QUESTION_GENERALE'}
           })),
           { role: 'user', content: message }
         ],
-        max_tokens: 150,
-        temperature: 0.75
+        max_tokens: 250,
+        temperature: 0.7
       })
     })
 
@@ -178,7 +178,11 @@ Intention détectée : ${intent || 'QUESTION_GENERALE'}
     if (!groqResponse.ok) {
       const errText = await groqResponse.text()
       console.warn(`[Groq] Erreur ${groqResponse.status} — fallback local:`, errText.slice(0, 200))
-      return NextResponse.json({ reply: LOCAL_RESPONSES.QUESTION_GENERALE, intent, local: true })
+      const prenom = userContext?.prenom || ''
+      const fallbackReply = prenom
+        ? `${prenom}, je rencontre un problème technique. Essayez de reformuler votre question.`
+        : `Je rencontre un problème technique. Essayez de reformuler votre question.`
+      return NextResponse.json({ reply: fallbackReply, intent, local: true })
     }
 
     const data = await groqResponse.json()
