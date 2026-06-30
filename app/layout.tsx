@@ -5,6 +5,7 @@ import { Toaster } from 'sonner'
 import { RegisterServiceWorker } from './register-sw'
 import { PWAInstallPrompt } from '@/components/ui/PWAInstallPrompt'
 import { AuthProvider } from '@/components/AuthProvider'
+import { VoiceAgentLoader } from '@/components/VoiceAgent/VoiceAgentLoader'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -55,6 +56,7 @@ export default function RootLayout({
           {children}
           <PWAInstallPrompt />
           <Toaster position="top-right" richColors />
+          <VoiceAgentLoader />
         </AuthProvider>
       </body>
     </html>

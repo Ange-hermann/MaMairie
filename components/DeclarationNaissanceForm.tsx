@@ -8,6 +8,7 @@ import { Button } from './ui/Button'
 import { ModalAvertissementsLegaux } from './ModalAvertissementsLegaux'
 import { Check, ChevronRight, ChevronLeft, Copy, Download } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { agentFormStore } from '@/lib/voiceAgent/agentFormStore'
 
 interface FormData {
   // Enfant
@@ -64,6 +65,36 @@ export function DeclarationNaissanceForm() {
     nationalite_mere: 'Ivoirienne',
     profession_mere: ''
   })
+
+  // ─── Pré-remplissage depuis l'agent vocal ─────────────────────
+  useEffect(() => {
+    const applyPrefill = async () => {
+      const p = agentFormStore.prefill
+      if (!p) return
+      setFormData(prev => ({
+        ...prev,
+        nom_enfant: p.nom_enfant || prev.nom_enfant,
+        prenom_enfant: p.prenom_enfant || prev.prenom_enfant,
+        date_naissance: p.date_naissance || prev.date_naissance,
+        heure_naissance: p.heure_naissance || prev.heure_naissance,
+        lieu_naissance: p.lieu_naissance || prev.lieu_naissance,
+        sexe: (p.sexe as any) || prev.sexe,
+        nom_pere: p.nom_pere_decl || prev.nom_pere,
+        prenom_pere: p.prenom_pere || prev.prenom_pere,
+        profession_pere: p.profession_pere || prev.profession_pere,
+        nom_mere: p.nom_mere_decl || prev.nom_mere,
+        prenom_mere: p.prenom_mere || prev.prenom_mere,
+        profession_mere: p.profession_mere || prev.profession_mere,
+      }))
+      if (p.commune_nom) {
+        const { data: mairie } = await supabase
+          .from('mairies').select('id').ilike('nom_mairie', `%${p.commune_nom}%`).limit(1).single()
+        if (mairie) setFormData(prev => ({ ...prev, mairie_id: mairie.id }))
+      }
+      agentFormStore.clearPrefill()
+    }
+    applyPrefill()
+  }, [])
 
   useEffect(() => {
     fetchMairies()

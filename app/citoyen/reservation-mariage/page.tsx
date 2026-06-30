@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Heart, AlertTriangle, CheckCircle, Clock, XCircle, ChevronRight, ChevronLeft } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
+import { agentFormStore } from '@/lib/voiceAgent/agentFormStore'
 
 const ETAPES = ['Époux', 'Épouse', 'Mariage & Témoins', 'Récapitulatif']
 
@@ -71,6 +72,35 @@ export default function ReservationMariagePage() {
     temoin2_profession: '',
     temoin2_adresse: '',
   })
+
+  // ─── Pré-remplissage depuis l'agent vocal ───────────────────────
+  useEffect(() => {
+    const applyPrefill = async () => {
+      const p = agentFormStore.prefill
+      if (!p) return
+      setForm(prev => ({
+        ...prev,
+        nom_epoux: p.nom_epoux || prev.nom_epoux,
+        prenom_epoux: p.prenom_epoux || prev.prenom_epoux,
+        date_naissance_epoux: p.date_naissance_epoux || prev.date_naissance_epoux,
+        lieu_naissance_epoux: p.lieu_naissance_epoux || prev.lieu_naissance_epoux,
+        profession_epoux: p.profession_epoux || prev.profession_epoux,
+        nom_epouse: p.nom_epouse || prev.nom_epouse,
+        prenom_epouse: p.prenom_epouse || prev.prenom_epouse,
+        date_naissance_epouse: p.date_naissance_epouse || prev.date_naissance_epouse,
+        lieu_naissance_epouse: p.lieu_naissance_epouse || prev.lieu_naissance_epouse,
+        profession_epouse: p.profession_epouse || prev.profession_epouse,
+        date_mariage_souhaitee: p.date_mariage_souhaitee || prev.date_mariage_souhaitee,
+      }))
+      if (p.commune_nom) {
+        const { data: mairie } = await supabase
+          .from('mairies').select('id').ilike('nom_mairie', `%${p.commune_nom}%`).limit(1).single()
+        if (mairie) setForm(prev => ({ ...prev, mairie_id: mairie.id }))
+      }
+      agentFormStore.clearPrefill()
+    }
+    applyPrefill()
+  }, [])
 
   useEffect(() => {
     init()

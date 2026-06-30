@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { agentFormStore } from '@/lib/voiceAgent/agentFormStore'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
@@ -18,6 +19,7 @@ import { MapPin, AlertCircle } from 'lucide-react'
 
 export default function DemandeExtraitPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClientComponentClient()
   const [loading, setLoading] = useState(false)
   const [userData, setUserData] = useState<any>(null)
@@ -30,20 +32,27 @@ export default function DemandeExtraitPage() {
   const [mairieCompetente, setMairieCompetente] = useState<any>(null)
   const [loadingMairie, setLoadingMairie] = useState(false)
   const [villagesResults, setVillagesResults] = useState<any[]>([])
+
+  // Pré-remplissage depuis l'agent vocal (query params)
+  const agentType = searchParams.get('type_acte') as 'naissance' | 'mariage' | 'deces' | null
+  const agentNom = searchParams.get('nom') || ''
+  const agentPrenom = searchParams.get('prenom') || ''
+  const agentDate = searchParams.get('date_naissance') || ''
+  const agentTel = searchParams.get('telephone') || ''
   
-  const [typeActe, setTypeActe] = useState<'naissance' | 'mariage' | 'deces'>('naissance')
+  const [typeActe, setTypeActe] = useState<'naissance' | 'mariage' | 'deces'>(agentType || 'naissance')
   
   const [formData, setFormData] = useState({
     numero_acte: '',
-    nom: '',
-    prenom: '',
-    date_naissance: '',
+    nom: agentNom,
+    prenom: agentPrenom,
+    date_naissance: agentDate,
     lieu_naissance: '',
     nom_pere: '',
     nom_mere: '',
-    telephone: '',
+    telephone: agentTel,
     mairie_id: '',
-    selection_mode: 'mairie', // 'mairie', 'sous_prefecture', 'village'
+    selection_mode: 'mairie',
     village_search: '',
     // Pour mariage
     nom_conjoint: '',
@@ -55,6 +64,51 @@ export default function DemandeExtraitPage() {
     lieu_deces: '',
     cause_deces: '',
   })
+
+  // ─── Lire le store de l'agent vocal et remplir les champs ───────────
+  useEffect(() => {
+    const applyPrefill = async () => {
+      const prefill = agentFormStore.prefill
+      if (!prefill) return
+
+      if (prefill.type_acte) setTypeActe(prefill.type_acte)
+
+      setFormData(prev => ({
+        ...prev,
+        numero_acte: prefill.numero_acte && prefill.numero_acte.toLowerCase() !== 'inconnu' ? prefill.numero_acte : prev.numero_acte,
+        nom: prefill.nom || prev.nom,
+        prenom: prefill.prenom || prev.prenom,
+        date_naissance: prefill.date_naissance || prev.date_naissance,
+        lieu_naissance: prefill.lieu_naissance || prev.lieu_naissance,
+        nom_pere: prefill.nom_pere || prev.nom_pere,
+        nom_mere: prefill.nom_mere || prev.nom_mere,
+        telephone: prefill.telephone || prev.telephone,
+        nom_conjoint: prefill.nom_conjoint || prev.nom_conjoint,
+        prenom_conjoint: prefill.prenom_conjoint || prev.prenom_conjoint,
+        date_mariage: prefill.date_mariage || prev.date_mariage,
+        lieu_mariage: prefill.lieu_mariage || prev.lieu_mariage,
+        date_deces: prefill.date_deces || prev.date_deces,
+        lieu_deces: prefill.lieu_deces || prev.lieu_deces,
+        cause_deces: prefill.cause_deces || prev.cause_deces,
+      }))
+
+      // Rechercher la mairie par nom de commune si fourni
+      if (prefill.commune_nom) {
+        const { data: mairie } = await supabase
+          .from('mairies')
+          .select('id, nom_mairie')
+          .ilike('nom_mairie', `%${prefill.commune_nom}%`)
+          .limit(1)
+          .single()
+        if (mairie) {
+          setFormData(prev => ({ ...prev, mairie_id: mairie.id }))
+        }
+      }
+
+      agentFormStore.clearPrefill()
+    }
+    applyPrefill()
+  }, [])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -317,6 +371,12 @@ export default function DemandeExtraitPage() {
         
         <main className="p-4 md:p-6">
           <div className="max-w-4xl mx-auto">
+            {(agentNom || agentPrenom) && (
+              <div className="mb-4 flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-green-800 text-sm">
+                <span className="text-xl">🎤</span>
+                <span>Les champs ont été <strong>pré-remplis par MaMairie IA</strong>. Vérifiez les informations, joignez votre document et soumettez.</span>
+              </div>
+            )}
             <div className="mb-4 md:mb-6">
               <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
                 Demander un Extrait d'Acte {typeActe === 'naissance' ? 'de Naissance' : typeActe === 'mariage' ? 'de Mariage' : 'de Décès'}
