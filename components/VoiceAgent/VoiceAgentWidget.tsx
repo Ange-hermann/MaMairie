@@ -40,6 +40,7 @@ export function VoiceAgentWidget() {
   const sttRef = useRef<MaMairieSTT | null>(null)
   const isListeningRef = useRef(false)
   const startListeningRef = useRef<() => void>(() => {})
+  const handleOpenRef = useRef<() => Promise<void>>(async () => {})
 
   // ─── Charger le contexte citoyen ────────────────────────────────
   useEffect(() => {
@@ -138,13 +139,14 @@ export function VoiceAgentWidget() {
 
   // ─── Wake word détecté ───────────────────────────────────────────
   const handleWakeWordDetected = useCallback(async () => {
-    if (isListeningRef.current || isOpen) return
-    setIsOpen(true)
-    setIsMinimized(false)
-    // createOrchestrator sera appelé dans handleOpen via le state
-    // On démarre juste l'écoute après un délai pour laisser le widget s'ouvrir
-    setTimeout(() => startListeningRef.current(), 800)
-  }, [isOpen])
+    if (isListeningRef.current) return
+    // Activer autoListen pour que l'écoute reprenne après chaque réponse
+    autoListenRef.current = true
+    setAutoListen(true)
+    // Ouvrir le widget et initialiser l'orchestrateur + speakWelcome
+    await handleOpenRef.current()
+    // L'écoute démarrera automatiquement via onStateChange speaking→sleeping
+  }, [])
 
   // ─── Démarrer wake word dès connexion ───────────────────────────
   useEffect(() => {
@@ -308,6 +310,9 @@ export function VoiceAgentWidget() {
       setShowPermissionGuide(true)
     }
   }
+
+  // Garder handleOpenRef à jour
+  useEffect(() => { handleOpenRef.current = handleOpen })
 
   // ─── Fermer le widget ────────────────────────────────────────────
   const handleClose = async () => {
