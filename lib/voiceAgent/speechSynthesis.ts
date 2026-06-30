@@ -4,42 +4,37 @@ export class MaMairieTTS {
   private isSpeaking = false
   private watchdogTimer: ReturnType<typeof setTimeout> | null = null
   private keepAliveTimer: ReturnType<typeof setInterval> | null = null
-  private retryCount = 0
-  private currentText = ''
-  private currentOnEnd: (() => void) | undefined
+  private voicesReady = false
 
   constructor() {
     this.synth = window.speechSynthesis
+    // Charger les voix immédiatement si disponibles
     this.loadVoices()
-    // Chrome/Android charge les voix en async
-    if (this.synth.onvoiceschanged !== undefined) {
-      this.synth.onvoiceschanged = () => this.loadVoices()
+    // Chrome charge les voix en async via cet événement
+    if ('onvoiceschanged' in this.synth) {
+      this.synth.onvoiceschanged = () => {
+        this.loadVoices()
+        this.voicesReady = true
+      }
     }
-    // Forcer plusieurs tentatives de chargement
-    setTimeout(() => this.loadVoices(), 100)
-    setTimeout(() => this.loadVoices(), 500)
-    setTimeout(() => this.loadVoices(), 1500)
+    // Tentatives supplémentaires pour navigateurs lents
+    setTimeout(() => this.loadVoices(), 200)
+    setTimeout(() => this.loadVoices(), 800)
   }
 
   private loadVoices(): void {
     const voices = this.synth.getVoices()
     if (voices.length === 0) return
+    this.voicesReady = true
 
     const fr = voices.filter(v => v.lang.startsWith('fr'))
-
-    // Priorité : voix féminines françaises connues sur chaque plateforme
     this.voice =
-      // iOS Safari — Amélie (féminine, fr-CA) ou Marie
       fr.find(v => v.name === 'Amélie') ||
       fr.find(v => v.name === 'Marie') ||
-      // Android Chrome — Google français féminin
       fr.find(v => v.name === 'Google français') ||
       fr.find(v => /google/i.test(v.name) && v.lang === 'fr-FR') ||
-      // Windows — Hortense
       fr.find(v => v.name.includes('Hortense')) ||
-      // macOS — Amelie ou Julie
       fr.find(v => v.name.includes('Julie')) ||
-      // Tout fr-FR féminin (éviter Thomas qui est masculin)
       fr.find(v => v.lang === 'fr-FR' && !/thomas|nicolas|pierre|jean|paul|mathieu/i.test(v.name)) ||
       fr.find(v => v.lang === 'fr-FR') ||
       fr[0] ||
@@ -53,17 +48,13 @@ export class MaMairieTTS {
 
   private doSpeak(text: string, onEnd?: () => void): void {
     this.clearTimers()
-
-    // Annuler seulement si déjà en train de parler (évite de casser le contexte audio iOS)
-    if (this.synth.speaking || this.synth.pending) {
-      this.synth.cancel()
-    }
+    if (this.synth.speaking || this.synth.pending) this.synth.cancel()
 
     const utterance = new SpeechSynthesisUtterance(text)
     if (this.voice) utterance.voice = this.voice
     utterance.lang = 'fr-FR'
-    utterance.rate = 0.9
-    utterance.pitch = 1.0
+    utterance.rate = 1.0   // Vitesse naturelle
+    utterance.pitch = 1.05 // Légèrement plus aigu = plus féminin
     utterance.volume = 1.0
 
     let finished = false
@@ -77,79 +68,62 @@ export class MaMairieTTS {
 
     utterance.onstart = () => {
       this.isSpeaking = true
-      // Watchdog 60s — si onend ne se déclenche jamais
+      // Watchdog : si onend ne se déclenche jamais (bug Chrome)
       this.watchdogTimer = setTimeout(() => {
+        console.warn('[TTS] watchdog déclenché')
         this.synth.cancel()
         done()
-      }, 60_000)
-      // KeepAlive — fix Chrome/Android freeze après ~15s
+      }, 30_000)
+      // KeepAlive Chrome : resume() seul suffit, pas besoin de pause()
       this.keepAliveTimer = setInterval(() => {
-        if (this.synth.speaking) { this.synth.pause(); this.synth.resume() }
-      }, 10_000)
+        if (this.synth.speaking && !this.synth.paused) {
+          this.synth.resume()
+        }
+      }, 5_000)
     }
 
     utterance.onend = done
     utterance.onerror = (e: any) => {
-      if (e.error === 'interrupted' || e.error === 'canceled') return
+      if (e.error === 'interrupted' || e.error === 'canceled') { done(); return }
       console.warn('[TTS] onerror:', e.error)
       done()
     }
 
-    // iOS Safari : speak() doit être appelé SANS délai depuis un event handler
     this.synth.speak(utterance)
-  }
-
-  private waitForVoices(callback: () => void, maxWaitMs = 3000): void {
-    const voices = this.synth.getVoices()
-    if (voices.length > 0) {
-      this.loadVoices()
-      callback()
-      return
-    }
-    // Voix pas encore chargées — attendre l'événement
-    const deadline = setTimeout(() => {
-      // Timeout dépassé : parler quand même avec la voix par défaut
-      callback()
-    }, maxWaitMs)
-
-    const handler = () => {
-      clearTimeout(deadline)
-      this.loadVoices()
-      callback()
-    }
-    if (this.synth.onvoiceschanged !== undefined) {
-      const prev = this.synth.onvoiceschanged
-      this.synth.onvoiceschanged = (e) => {
-        this.synth.onvoiceschanged = prev
-        handler()
-      }
-    } else {
-      // Fallback poll
-      const poll = setInterval(() => {
-        if (this.synth.getVoices().length > 0) {
-          clearInterval(poll)
-          clearTimeout(deadline)
-          handler()
-        }
-      }, 100)
-    }
   }
 
   speak(text: string, onEnd?: () => void): void {
     const cleanText = text
       .replace(/[\u{1F300}-\u{1FFFF}]/gu, '')
       .replace(/[•→←★☆✓✗]/g, '')
+      .replace(/\*+/g, '')
       .replace(/\s+/g, ' ')
       .trim()
 
     if (!cleanText) { onEnd?.(); return }
 
-    this.currentText = cleanText
-    this.currentOnEnd = onEnd
-    this.retryCount = 0
-    this.isSpeaking = false
+    if (this.voicesReady) {
+      this.doSpeak(cleanText, onEnd)
+      return
+    }
 
-    this.waitForVoices(() => this.doSpeak(cleanText, onEnd))
+    // Voix pas encore chargées — attendre max 2s
+    let resolved = false
+    const resolve = () => {
+      if (resolved) return
+      resolved = true
+      this.loadVoices()
+      this.doSpeak(cleanText, onEnd)
+    }
+
+    const timeout = setTimeout(resolve, 2000)
+    const poll = setInterval(() => {
+      if (this.synth.getVoices().length > 0) {
+        clearInterval(poll)
+        clearTimeout(timeout)
+        resolve()
+      }
+    }, 100)
   }
 
   stop(): void {
@@ -158,11 +132,7 @@ export class MaMairieTTS {
     this.isSpeaking = false
   }
 
-  get speaking(): boolean {
-    return this.isSpeaking
-  }
+  get speaking(): boolean { return this.isSpeaking }
 
-  static isSupported(): boolean {
-    return 'speechSynthesis' in window
-  }
+  static isSupported(): boolean { return 'speechSynthesis' in window }
 }
